@@ -19,7 +19,7 @@
         "doReadToEarn": true
     },
     "searchOnBingLocalQueries": false,
-    "globalTimeout": "30s",
+    "globalTimeout": "60s",
     "searchSettings": {
         "useGeoLocaleQueries": true,
         "scrollRandomResults": true,

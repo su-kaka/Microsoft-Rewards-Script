@@ -47,6 +47,8 @@ export class SearchOnBing extends Workers {
         try {
             if (this.bot.config.searchOnBingLocalQueries) {
                 const data = fs.readFileSync(path.join(__dirname, '../queries.json'), 'utf8')
+                this.bot.log(this.bot.isMobile, '必应搜索', '获取本地queries.json')
+
                 queries = JSON.parse(data)
             } else {
                 // Fetch from the repo directly so the user doesn't need to redownload the script for the new activities
@@ -55,6 +57,8 @@ export class SearchOnBing extends Workers {
                     url: 'https://raw.githubusercontent.com/TheNetsky/Microsoft-Rewards-Script/refs/heads/main/src/functions/queries.json'
                 })
                 queries = response.data
+                this.bot.log(this.bot.isMobile, '必应搜索', `获取在线queries.json： ${queries}`)
+
             }
 
             const answers = queries.find(x => this.normalizeString(x.title) === this.normalizeString(title))

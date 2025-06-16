@@ -197,9 +197,11 @@ export class MicrosoftRewardsBot {
         }
 
         // 打开一个新标签页，用于完成任务
+        log(this.isMobile, 'MAIN-POINTS', `打开一个新标签页，用于完成任务`);
         const workerPage = await browser.newPage();
 
         // 在新标签页中导航到主页
+        log(this.isMobile, 'MAIN-POINTS', `在新标签页中导航到主页务`);
         await this.browser.func.goHome(workerPage);
 
         // 如果配置允许，完成每日任务集

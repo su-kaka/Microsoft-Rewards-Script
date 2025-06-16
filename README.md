@@ -2,7 +2,7 @@
 自动化的微软奖励脚本，这次使用 TypeScript、Cheerio 和 Playwright 编写。
 
 正在开发中，主要供个人使用！
-该项目来源于https://github.com/TheNetsky/Microsoft-Rewards-Script的基础上进行本地化处理
+该项目来源于https://github.com/TheNetsky/Microsoft-Rewards-Script，的基础上进行本地化处理
 ## 如何设置 ##
 1. 下载或克隆源代码
 2. 运行 `npm i` 安装依赖包

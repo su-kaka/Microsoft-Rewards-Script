@@ -50,7 +50,7 @@ export default class BrowserFunc {
                 try {
                     // If activities are found, exit the loop
                     await page.waitForSelector('#more-activities', { timeout: 1000 })
-                    this.bot.log(this.bot.isMobile, 'GO-HOME', 'Visited homepage successfully')
+                    this.bot.log(this.bot.isMobile, '返回主页', '成功访问主页')
                     break
 
                 } catch (error) {
@@ -66,7 +66,7 @@ export default class BrowserFunc {
                     await this.bot.utils.waitRandom(2000,5000)
                     await page.goto(this.bot.config.baseURL)
                 } else {
-                    this.bot.log(this.bot.isMobile, 'GO-HOME', 'Visited homepage successfully')
+                    this.bot.log(this.bot.isMobile, '返回主页', '成功访问主页')
                     break
                 }
 
@@ -89,7 +89,7 @@ export default class BrowserFunc {
         try {
             // Should never happen since tasks are opened in a new tab!
             if (currentURL.hostname !== dashboardURL.hostname) {
-                this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', 'Provided page did not equal dashboard page, redirecting to dashboard page')
+                this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', '提供的页面不是仪表盘页面，正在重定向到仪表盘页面')
                 await this.goHome(this.bot.homePage)
             }
 
