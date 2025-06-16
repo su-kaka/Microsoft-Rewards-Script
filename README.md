@@ -5,7 +5,7 @@
 该项目来源于https://github.com/TheNetsky/Microsoft-Rewards-Script，的基础上进行本地化处理
 ## 如何设置 ##
 1. 下载或克隆源代码
-2. 运行 `npm i` 安装依赖包
+2. 运行 `npm i` 安装依赖包（若Error: browserType.launch: Executable doesn't exist报错执行pnpm exec playwright install）
 3. 将 `accounts.example.json` 重命名为 `accounts.json`，并添加你的账户信息
 4. 按照你的喜好修改 `config.json` 文件
 5. 运行 `npm run build` 构建脚本
