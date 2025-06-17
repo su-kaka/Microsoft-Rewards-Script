@@ -3,7 +3,7 @@
         "email": "email_1",
         "password": "password_1",
         "proxy": {
-            "proxyAxios": true,
+            "proxyAxios": false,
             "url": "",
             "port": 0,
             "username": "",
@@ -14,7 +14,7 @@
         "email": "email_2",
         "password": "password_2",
         "proxy": {
-            "proxyAxios": true,
+            "proxyAxios": false,
             "url": "",
             "port": 0,
             "username": "",
