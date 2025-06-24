@@ -44,11 +44,11 @@ export class Search extends Workers {
         let googleSearchQueries =[];
         const targetCountries = ['cn', 'tw', 'hk'];
         const counters = this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : 'US'
-        if ( targetCountries.includes(counters)) {
+        // if ( targetCountries.includes(counters)) {
             googleSearchQueries = await this.getChinaTrends(counters)
-        }else{
-            googleSearchQueries = await this.getGoogleTrends(counters)
-        }
+        // }else{
+        //     googleSearchQueries = await this.getGoogleTrends(counters)
+        // }
         this.bot.log(this.bot.isMobile, 'SEARCH-BING', `googleSearchQueries:${counters}`)
 
         // 打乱搜索词数组的顺序
@@ -311,15 +311,11 @@ export class Search extends Workers {
             related: default_search_words as string[]
         })
         
-
         return queryTerms
 
     }
 
-    
 
-
-    
     private async getGoogleTrends(geoLocale: string = 'US'): Promise<GoogleSearch[]> {
         const queryTerms: GoogleSearch[] = []
         this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `正在生成搜索查询，可能需要一些时间！ | 地理区域: ${geoLocale}`)
