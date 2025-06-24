@@ -42,13 +42,14 @@ export class Search extends Workers {
         // 根据配置决定是否使用地区相关的查询词，从谷歌趋势获取搜索词
         // 定义一个包含目标国家代码的数组，方便后续扩展和维护
         let googleSearchQueries =[];
-        const targetCountries = ['cn', 'tw', 'hk'];
+        // const targetCountries = ['cn', 'tw', 'hk'];
         const counters = this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : 'US'
         // if ( targetCountries.includes(counters)) {
+        if (this.bot.config.searchSettings.useGeoLocaleQueries) {
             googleSearchQueries = await this.getChinaTrends(counters)
-        // }else{
-        //     googleSearchQueries = await this.getGoogleTrends(counters)
-        // }
+        }else{
+            googleSearchQueries = await this.getGoogleTrends(counters)
+        }
         this.bot.log(this.bot.isMobile, 'SEARCH-BING', `googleSearchQueries:${counters}`)
 
         // 打乱搜索词数组的顺序
@@ -340,8 +341,8 @@ export class Search extends Workers {
 
             const mappedTrendsData = trendsData.map(query => [query[0], query[9]!.slice(1)])
             if (mappedTrendsData.length < 90) {
-                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', '搜索查询不足，回退到美国地区', 'warn')
-                return this.getGoogleTrends()
+                this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', '搜索查询不足，回退到中国地区', 'warn')
+                return this.getChinaTrends()
             }
 
             for (const [topic, relatedQueries] of mappedTrendsData) {
