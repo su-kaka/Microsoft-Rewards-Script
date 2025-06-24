@@ -134,8 +134,8 @@ export class MicrosoftRewardsBot {
                 ]);
             } else {
                 // 串行执行桌面端和移动端任务
-                this.isMobile = false;
-                await this.Desktop(account);
+                // this.isMobile = false;
+                // await this.Desktop(account);
 
                 this.isMobile = true;
                 await this.Mobile(account);
@@ -166,7 +166,7 @@ export class MicrosoftRewardsBot {
 
         // 导航到奖励主页
         await this.browser.func.goHome(this.homePage);
-
+        
         // 获取仪表盘数据
         const data = await this.browser.func.getDashboardData();
 
@@ -209,7 +209,7 @@ export class MicrosoftRewardsBot {
             await this.workers.doDailySet(workerPage, data);
         }
 
-        // 如果配置允许，完成更多促销活动
+        // 如果配置允许，完成更多活动活动
         if (this.config.workers.doMorePromotions) {
             await this.workers.doMorePromotions(workerPage, data);
         }
@@ -258,6 +258,21 @@ export class MicrosoftRewardsBot {
         // 获取应用端可赚取的积分
         const appEarnablePoints = await this.browser.func.getAppEarnablePoints(this.accessToken);
 
+
+        // 打开一个新标签页，用于完成任务-2025年6月23日17:15:13
+        log(this.isMobile, 'MAIN-POINTS', `打开一个新标签页，用于完成任务`);
+        const workerPage = await browser.newPage();
+
+        // 在新标签页中导航到主页-2025年6月23日17:15:13
+        log(this.isMobile, 'MAIN-POINTS', `在新标签页中导航到主页务`);
+        await this.browser.func.goHome(workerPage);
+
+        // 如果配置允许，完成每日任务集-2025年6月23日17:15:13
+        if (this.config.workers.doDailySet) {
+            await this.workers.doDailySet(workerPage, data);
+        }
+
+
         // 统计移动端可收集的总积分
         this.pointsCanCollect = browserEnarablePoints.mobileSearchPoints + appEarnablePoints.totalEarnablePoints;
 
@@ -277,6 +292,7 @@ export class MicrosoftRewardsBot {
         if (this.config.workers.doDailyCheckIn) {
             await this.activities.doDailyCheckIn(this.accessToken, data);
         }
+
 
         // 如果配置允许，进行阅读赚取积分
         if (this.config.workers.doReadToEarn) {

@@ -97,12 +97,12 @@ export class Workers {
         const activitiesUncompleted = morePromotions?.filter(x => !x.complete && x.pointProgressMax > 0 && x.exclusiveLockedFeatureStatus !== 'locked') ?? []
 
         if (!activitiesUncompleted.length) {
-            this.bot.log(this.bot.isMobile, '更多促销', '所有“更多促销”项目均已完成')
+            this.bot.log(this.bot.isMobile, '更多活动', '所有“更多活动”项目均已完成')
             return
         }
 
         // Solve Activities
-        this.bot.log(this.bot.isMobile, '更多促销', '开始解决“更多促销”项目')
+        this.bot.log(this.bot.isMobile, '更多活动', '开始解决“更多活动”项目')
 
         page = await this.bot.browser.utils.getLatestTab(page)
 
@@ -113,7 +113,7 @@ export class Workers {
         // Always return to the homepage if not already
         await this.bot.browser.func.goHome(page)
 
-        this.bot.log(this.bot.isMobile, '更多促销', '所有“更多促销”项目均已完成')
+        this.bot.log(this.bot.isMobile, '更多活动', '所有“更多活动”项目均已完成')
     }
 
     // Solve all the different types of activities
@@ -138,9 +138,11 @@ export class Workers {
                     await activityPage.goto(activityInitial)
                 }
 
-
+                //"[data-bi-id^=\"Gamification_DailySet_ZHCN_20250624_Child1\"] .pointLink:not(.contentContainer .pointLink)"
                 let selector = `[data-bi-id^="${activity.offerId}"] .pointLink:not(.contentContainer .pointLink)`
-
+                if (this.bot.isMobile){
+                    selector = `[data-bi-id^="${activity.offerId}"] .pointLink`
+                }
                 if (punchCard) {
                     selector = await this.bot.browser.func.getPunchCardActivity(activityPage, activity)
 

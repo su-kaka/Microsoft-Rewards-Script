@@ -1,15 +1,20 @@
 # 微软奖励脚本
 自动化的微软奖励脚本，这次使用 TypeScript、Cheerio 和 Playwright 编写。
 
-正在开发中，主要供个人使用！
-该项目来源于https://github.com/TheNetsky/Microsoft-Rewards-Script，的基础上进行本地化处理
+该项目来源于https://github.com/TheNetsky/Microsoft-Rewards-Script
+
+本项目主要内容为本地化处理，主要针对的是中文用户。并在原有基础上完善功能。若有侵权请联系我删除。
+
+## 新增功能 ##
+1.添加了移动端的活动领取-2025年6月24日
+
 ## 如何设置 ##
 1. 下载或克隆源代码
-2. 运行 `npm i` 安装依赖包（若Error: browserType.launch: Executable doesn't exist报错执行pnpm exec playwright install）
+2. 运行 `pnpm i` 安装依赖包（若Error: browserType.launch: Executable doesn't exist报错执行pnpm exec playwright install）
 3. 将 `accounts.example.json` 重命名为 `accounts.json`，并添加你的账户信息
 4. 按照你的喜好修改 `config.json` 文件
-5. 运行 `npm run build` 构建脚本
-6. 运行 `npm run start` 启动构建好的脚本
+5. 运行 `pnpm build` 构建脚本
+6. 运行 `pnpm start` 启动构建好的脚本
 
 ## 注意事项 ##
 - 如果你在未先关闭浏览器窗口的情况下结束脚本（仅在 `headless` 为 `false` 时），会有 Chrome 进程继续占用资源。你可以使用任务管理器关闭这些进程，或者使用附带的 `npm run kill-chrome-win` 脚本（Windows 系统）。
@@ -76,7 +81,7 @@
 - [x] 模拟链接点击支持
 - [x] 地理位置搜索查询
 - [x] 完成每日任务集
-- [x] 完成更多促销任务
+- [x] 完成更多活动任务
 - [x] 解决 10 积分的测验
 - [x] 解决 30 - 40 积分的测验
 - [x] 完成点击奖励任务
@@ -96,4 +101,3 @@
 <br /> 
 请自行承担使用此脚本的风险！
 
-        

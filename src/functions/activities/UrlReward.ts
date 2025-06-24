@@ -9,7 +9,7 @@ export class UrlReward extends Workers {
         this.bot.log(this.bot.isMobile, '网址奖励', '正在尝试完成网址奖励')
 
         try {
-            this.bot.utils.waitRandom(2000,5000)
+            this.bot.utils.waitRandom(10000,18000)
 
             await page.close()
 
