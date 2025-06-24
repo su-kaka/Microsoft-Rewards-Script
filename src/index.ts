@@ -134,8 +134,8 @@ export class MicrosoftRewardsBot {
                 ]);
             } else {
                 // 串行执行桌面端和移动端任务
-                // this.isMobile = false;
-                // await this.Desktop(account);
+                this.isMobile = false;
+                await this.Desktop(account);
 
                 this.isMobile = true;
                 await this.Mobile(account);
