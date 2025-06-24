@@ -39,7 +39,7 @@ export async function getUserAgent(isMobile: boolean) {
     return { userAgent: uaTemplate, userAgentMetadata: uaMetadata }
 }
 
-export async function getChromeVersion_old(isMobile: boolean): Promise<string> {
+export async function getChromeVersion_online(isMobile: boolean): Promise<string> {
     try {
         const request = {
             url: 'https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json',
@@ -58,7 +58,7 @@ export async function getChromeVersion_old(isMobile: boolean): Promise<string> {
 }
 export async function getChromeVersion(isMobile: boolean): Promise<string> {
     try {
-        return "139.0.7231.0"
+        return "137.0.7151.119"
     } catch (error) {
         throw log(isMobile, 'USERAGENT-CHROME-VERSION', 'An error occurred:' + error, 'error');
     }
