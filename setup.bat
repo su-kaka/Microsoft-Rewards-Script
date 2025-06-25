@@ -104,6 +104,15 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
+:: 修改run.bat中的目录为当前项目目录
+ echo 修改run.bat中的目录设置...
+ powershell -Command "(Get-Content 'run.bat') -replace 'cd D:\\project\\HtmlProject\\Microsoft-Rewards-Script', 'cd %%~dp0' | Set-Content 'run.bat'"
+ if %ERRORLEVEL% neq 0 (
+     echo 修改run.bat失败，请手动检查路径设置。
+     pause
+     exit /b 1
+ )
+
 :: 检查配置文件
 if exist "src\config.json" (
     echo config.json文件已存在，请确保已按照您的喜好进行了配置。
@@ -117,7 +126,7 @@ echo 安装完成！
 echo 后续步骤：
 echo 1. 编辑src\accounts.json文件添加您的账户信息
 echo 2. 检查并按需修改src\config.json配置文件
-echo 3. 运行脚本：pnpm start
+echo 3. 执行终端命令：pnpm start，或运行脚本：run.bat
 echo ===================================
 
 pause

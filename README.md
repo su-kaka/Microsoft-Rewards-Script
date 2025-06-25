@@ -14,7 +14,7 @@
 2. win系统运行setup.bat部署环境
 3. 在 `accounts.json`添加你的账户信息
 4. 按照你的喜好修改 `config.json` 文件
-5. 运行 `pnpm start` 启动构建好的脚本
+5. 运行 `pnpm start`或运行 `run.bat` 启动构建好的脚本
 ## 如何手工设置 ##
 1. 下载或克隆源代码
 2. 下载安装nodejs和pnpm环境

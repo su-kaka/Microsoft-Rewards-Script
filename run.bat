@@ -1,5 +1,5 @@
 :: 运行脚本
-:: 更改下方目录为项目目录
+:: 更改下方目录为项目目�?
 d:
-cd D:\project\HtmlProject\Microsoft-Rewards-Script
+cd %~dp0
 call pnpm start
