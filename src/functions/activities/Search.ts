@@ -50,7 +50,7 @@ export class Search extends Workers {
         }else{
             googleSearchQueries = await this.getGoogleTrends(counters)
         }
-        this.bot.log(this.bot.isMobile, 'SEARCH-BING', `googleSearchQueries:${counters}`)
+        this.bot.log(this.bot.isMobile, 'SEARCH-BING', `已完成获取${counters}的搜索词`)
 
         // 打乱搜索词数组的顺序
         googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
