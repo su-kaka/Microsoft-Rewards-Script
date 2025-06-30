@@ -155,11 +155,17 @@ export class MicrosoftRewardsBot {
     async Desktop(account: Account) {
         // 创建浏览器实例，并传入代理信息和账户邮箱
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email);
+        // 打开一个新页面测试浏览器防检测
+        // this.homePage = await browser.newPage();
+        // await this.homePage.goto('https://www.browserscan.net')
+        // await this.homePage.goto('https://www.browserscan.net/zh/browser-checker')
+        // await this.homePage.goto('https://arh.antoinevastel.com/bots/areyouheadless')
+
         // 打开一个新页面
         this.homePage = await browser.newPage();
-
         // 记录日志，表明开始启动浏览器
         log(this.isMobile, 'MAIN', '正在启动浏览器');
+
 
         // 登录微软奖励账户，然后跳转到奖励主页
         await this.login.login(this.homePage, account.email, account.password);

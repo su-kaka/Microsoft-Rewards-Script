@@ -2,131 +2,126 @@
 setlocal enabledelayedexpansion
 
 echo ===================================
-echo å¾®è½¯å¥–åŠ±è„šæœ¬ç¯å¢ƒè‡ªåŠ¨å®‰è£…ç¨‹åº
+echo Î¢Èí½±Àø½Å±¾»·¾³×Ô¶¯°²×°³ÌĞò
 echo ===================================
 echo.
 
-:: æ£€æŸ¥Node.jsæ˜¯å¦å·²å®‰è£…
+:: ¼ì²éNode.jsÊÇ·ñÒÑ°²×°
 where node >nul 2>nul
 if %ERRORLEVEL% neq 0 (
-    echo Node.jsæœªå®‰è£…ï¼Œæ­£åœ¨ä¸‹è½½å¹¶å®‰è£…...
+    echo Node.jsÎ´°²×°£¬ÕıÔÚÏÂÔØ²¢°²×°...
     
-    :: åˆ›å»ºä¸´æ—¶ç›®å½•
+    :: ´´½¨ÁÙÊ±Ä¿Â¼
     mkdir %TEMP%\node-install >nul 2>nul
     cd %TEMP%\node-install
     
-    :: ä¸‹è½½Node.jså®‰è£…ç¨‹åº
-    echo æ­£åœ¨ä¸‹è½½Node.jså®‰è£…ç¨‹åº...
+    :: ÏÂÔØNode.js°²×°³ÌĞò
+    echo ÕıÔÚÏÂÔØNode.js°²×°³ÌĞò...
     powershell -Command "(New-Object System.Net.WebClient).DownloadFile('https://nodejs.org/dist/v22.16.0/node-v22.16.0-x64.msi', 'node-installer.msi')"
     
-    :: å®‰è£…Node.js
-    echo æ­£åœ¨å®‰è£…Node.js...
+    :: °²×°Node.js
+    echo ÕıÔÚ°²×°Node.js...
     start /wait msiexec /i node-installer.msi /quiet /norestart
     
-    :: æ¸…ç†ä¸´æ—¶æ–‡ä»¶
+    :: ÇåÀíÁÙÊ±ÎÄ¼ş
     cd %~dp0
     rmdir /s /q %TEMP%\node-install >nul 2>nul
     
-    :: åˆ·æ–°ç¯å¢ƒå˜é‡
-    echo åˆ·æ–°ç¯å¢ƒå˜é‡...
-    echo æ³¨æ„ï¼šæ‚¨å¯èƒ½éœ€è¦é‡æ–°æ‰“å¼€å‘½ä»¤æç¤ºç¬¦ä»¥ä½¿Node.jsç¯å¢ƒå˜é‡ç”Ÿæ•ˆã€‚
-    
-    :: å°è¯•åˆ·æ–°PATHç¯å¢ƒå˜é‡
-    for /f "tokens=2*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v PATH') do set "PATH=%%b"
-    for /f "tokens=2*" %%a in ('reg query "HKCU\Environment" /v PATH') do set "PATH=%%b;%PATH%"
-    
-    :: æ£€æŸ¥Node.jsæ˜¯å¦å¯ç”¨
+
+    :: ¼ì²éNode.jsÊÇ·ñ¿ÉÓÃ
     where node >nul 2>nul
     if %ERRORLEVEL% neq 0 (
-        echo è­¦å‘Šï¼šNode.jså®‰è£…å®Œæˆï¼Œä½†ç¯å¢ƒå˜é‡å¯èƒ½æœªç”Ÿæ•ˆã€‚
-        echo è¯·å…³é—­æ­¤çª—å£ï¼Œé‡æ–°æ‰“å¼€å‘½ä»¤æç¤ºç¬¦ï¼Œç„¶åè¿è¡Œsetup.batç»§ç»­å®‰è£…ã€‚
+        echo ¾¯¸æ£ºNode.js°²×°Íê³É£¬µ«»·¾³±äÁ¿¿ÉÄÜÎ´ÉúĞ§¡£
+        echo Çë¹Ø±Õ´Ë´°¿Ú£¬ÖØĞÂ´ò¿ªÃüÁîÌáÊ¾·û£¬È»ºóÔËĞĞsetup.bat¼ÌĞø°²×°¡£
         pause
         exit
     )
 ) else (
-    echo Node.jså·²å®‰è£…ï¼Œç‰ˆæœ¬ä¿¡æ¯ï¼š
+    echo Node.jsÒÑ°²×°£¬°æ±¾ĞÅÏ¢£º
     node -v
 )
 
-:: æ£€æŸ¥pnpmæ˜¯å¦å·²å®‰è£…
+:: ¼ì²épnpmÊÇ·ñÒÑ°²×°
 where pnpm >nul 2>nul
 if %ERRORLEVEL% neq 0 (
-    echo pnpmæœªå®‰è£…ï¼Œæ­£åœ¨å®‰è£…...
-    npm install -g pnpm
+    echo npm¸üĞÂ...
+    call npm install -g npm
+    echo pnpmÎ´°²×°£¬ÕıÔÚ°²×°...
+    call npm install -g pnpm
     if %ERRORLEVEL% neq 0 (
-        echo å®‰è£…pnpmå¤±è´¥ï¼Œè¯·æ£€æŸ¥ç½‘ç»œè¿æ¥æˆ–æ‰‹åŠ¨å®‰è£…ã€‚
+        echo °²×°pnpmÊ§°Ü£¬Çë¼ì²éÍøÂçÁ¬½Ó»òÊÖ¶¯°²×°¡£
         pause
         exit /b 1
     )
 ) else (
-    echo pnpmå·²å®‰è£…
+    echo pnpmÒÑ°²×°
 )
 
 echo.
 
-:: å®‰è£…é¡¹ç›®ä¾èµ–
-echo æ­£åœ¨å®‰è£…é¡¹ç›®ä¾èµ–...
+:: °²×°ÏîÄ¿ÒÀÀµ
+echo ÕıÔÚ°²×°ÏîÄ¿ÒÀÀµ...
 call pnpm i
 if %ERRORLEVEL% neq 0 (
-    echo å®‰è£…ä¾èµ–å¤±è´¥ï¼Œè¯·æ£€æŸ¥ç½‘ç»œè¿æ¥æˆ–æ‰‹åŠ¨å®‰è£…ã€‚
+    echo °²×°ÒÀÀµÊ§°Ü£¬Çë¼ì²éÍøÂçÁ¬½Ó»òÊÖ¶¯°²×°¡£
     pause
     exit /b 1
 )
 
-:: å®‰è£…Playwright
-echo æ­£åœ¨å®‰è£…Playwright...
-call pnpm exec playwright install chromium
+:: °²×°Playwright
+echo ÕıÔÚ°²×°Playwright...
+call pnpm exec playwright install msedge
 if %ERRORLEVEL% neq 0 (
-    echo å®‰è£…Playwrightå¤±è´¥ï¼Œè¯·æ£€æŸ¥ç½‘ç»œè¿æ¥æˆ–æ‰‹åŠ¨å®‰è£…ã€‚
+    echo °²×°PlaywrightÊ§°Ü£¬Çë¼ì²éÍøÂçÁ¬½Ó»òÊÖ¶¯°²×°¡£
     pause
     exit /b 1
 )
 
-:: æ£€æŸ¥å¹¶å‡†å¤‡è´¦æˆ·é…ç½®æ–‡ä»¶
+:: ¼ì²é²¢×¼±¸ÕË»§ÅäÖÃÎÄ¼ş
 if not exist "src\accounts.json" (
     if exist "src\accounts.example.json" (
-        echo æ­£åœ¨åˆ›å»ºè´¦æˆ·é…ç½®æ–‡ä»¶...
+        echo ÕıÔÚ´´½¨ÕË»§ÅäÖÃÎÄ¼ş...
         copy "src\accounts.example.json" "src\accounts.json"
-        echo å·²åˆ›å»ºaccounts.jsonæ–‡ä»¶ï¼Œè¯·åœ¨è¿è¡Œè„šæœ¬å‰ç¼–è¾‘æ­¤æ–‡ä»¶æ·»åŠ æ‚¨çš„è´¦æˆ·ä¿¡æ¯ã€‚
+        echo ÒÑ´´½¨accounts.jsonÎÄ¼ş£¬ÇëÔÚÔËĞĞ½Å±¾Ç°±à¼­´ËÎÄ¼şÌí¼ÓÄúµÄÕË»§ĞÅÏ¢¡£
     ) else (
-        echo è­¦å‘Šï¼šæœªæ‰¾åˆ°accounts.example.jsonæ–‡ä»¶ï¼Œè¯·æ‰‹åŠ¨åˆ›å»ºaccounts.jsonæ–‡ä»¶ã€‚
+        echo ¾¯¸æ£ºÎ´ÕÒµ½accounts.example.jsonÎÄ¼ş£¬ÇëÊÖ¶¯´´½¨accounts.jsonÎÄ¼ş¡£
     )
 ) else (
-    echo accounts.jsonæ–‡ä»¶å·²å­˜åœ¨ã€‚
+    echo accounts.jsonÎÄ¼şÒÑ´æÔÚ¡£
 )
 
-:: æ„å»ºé¡¹ç›®
-echo æ­£åœ¨æ„å»ºé¡¹ç›®...
+:: ¹¹½¨ÏîÄ¿
+echo ÕıÔÚ¹¹½¨ÏîÄ¿...
 call pnpm build
 if %ERRORLEVEL% neq 0 (
-    echo æ„å»ºé¡¹ç›®å¤±è´¥ï¼Œè¯·æ£€æŸ¥é”™è¯¯ä¿¡æ¯ã€‚
+    echo ¹¹½¨ÏîÄ¿Ê§°Ü£¬Çë¼ì²é´íÎóĞÅÏ¢¡£
     pause
     exit /b 1
 )
 
-:: ä¿®æ”¹run.batä¸­çš„ç›®å½•ä¸ºå½“å‰é¡¹ç›®ç›®å½•
- echo ä¿®æ”¹run.batä¸­çš„ç›®å½•è®¾ç½®...
+:: ĞŞ¸Ärun.batÖĞµÄÄ¿Â¼Îªµ±Ç°ÏîÄ¿Ä¿Â¼
+ echo ĞŞ¸Ärun.batÖĞµÄÄ¿Â¼ÉèÖÃ...
  powershell -Command "(Get-Content 'run.bat') -replace 'cd D:\\project\\HtmlProject\\Microsoft-Rewards-Script', 'cd %%~dp0' | Set-Content 'run.bat'"
  if %ERRORLEVEL% neq 0 (
-     echo ä¿®æ”¹run.batå¤±è´¥ï¼Œè¯·æ‰‹åŠ¨æ£€æŸ¥è·¯å¾„è®¾ç½®ã€‚
+     echo ĞŞ¸Ärun.batÊ§°Ü£¬ÇëÊÖ¶¯¼ì²éÂ·¾¶ÉèÖÃ¡£
      pause
      exit /b 1
  )
 
-:: æ£€æŸ¥é…ç½®æ–‡ä»¶
+:: ¼ì²éÅäÖÃÎÄ¼ş
 if exist "src\config.json" (
-    echo config.jsonæ–‡ä»¶å·²å­˜åœ¨ï¼Œè¯·ç¡®ä¿å·²æŒ‰ç…§æ‚¨çš„å–œå¥½è¿›è¡Œäº†é…ç½®ã€‚
+    echo config.jsonÎÄ¼şÒÑ´æÔÚ£¬ÇëÈ·±£ÒÑ°´ÕÕÄúµÄÏ²ºÃ½øĞĞÁËÅäÖÃ¡£
 ) else (
-    echo è­¦å‘Šï¼šæœªæ‰¾åˆ°config.jsonæ–‡ä»¶ï¼Œè¯·ç¡®ä¿è¯¥æ–‡ä»¶å­˜åœ¨å¹¶å·²æ­£ç¡®é…ç½®ã€‚
+    echo ¾¯¸æ£ºÎ´ÕÒµ½config.jsonÎÄ¼ş£¬ÇëÈ·±£¸ÃÎÄ¼ş´æÔÚ²¢ÒÑÕıÈ·ÅäÖÃ¡£
 )
 
 echo.
 echo ===================================
-echo å®‰è£…å®Œæˆï¼
-echo åç»­æ­¥éª¤ï¼š
-echo 1. ç¼–è¾‘src\accounts.jsonæ–‡ä»¶æ·»åŠ æ‚¨çš„è´¦æˆ·ä¿¡æ¯
-echo 2. æ£€æŸ¥å¹¶æŒ‰éœ€ä¿®æ”¹src\config.jsoné…ç½®æ–‡ä»¶
-echo 3. æ‰§è¡Œç»ˆç«¯å‘½ä»¤ï¼špnpm startï¼Œæˆ–è¿è¡Œè„šæœ¬ï¼šrun.bat
+echo °²×°Íê³É£¡
+echo ºóĞø²½Öè£º
+echo 1. ±à¼­src\accounts.jsonÎÄ¼şÌí¼ÓÄúµÄÕË»§ĞÅÏ¢
+echo 2. ¼ì²é²¢°´ĞèĞŞ¸Äsrc\config.jsonÅäÖÃÎÄ¼ş
+echo 3. Ö´ĞĞÖÕ¶ËÃüÁî£ºpnpm start£¬»òÔËĞĞ½Å±¾£ºrun.bat
 echo ===================================
 
 pause

@@ -39,28 +39,23 @@ export async function getUserAgent(isMobile: boolean) {
     return { userAgent: uaTemplate, userAgentMetadata: uaMetadata }
 }
 
-export async function getChromeVersion_online(isMobile: boolean): Promise<string> {
+export async function getChromeVersion(isMobile: boolean): Promise<string> {
     try {
         const request = {
-            url: 'https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json',
+            // url: 'https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json',
+            url: 'https://cdn.npmmirror.com/binaries/chrome-for-testing/last-known-good-versions.json',
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
             }
         }
-
         const response = await axios(request)
         const data: ChromeVersion = response.data
         return data.channels.Stable.version
     } catch (error) {
-        throw log(isMobile, 'USERAGENT-CHROME-VERSION', 'An error occurred:' + error, 'error')
-    }
-}
-export async function getChromeVersion(isMobile: boolean): Promise<string> {
-    try {
-        return "137.0.7151.119"
-    } catch (error) {
-        throw log(isMobile, 'USERAGENT-CHROME-VERSION', 'An error occurred:' + error, 'error');
+        log(isMobile, 'USERAGENT-CHROME-VERSION', 'An error occurred:' + error, 'error')
+        // throw log(isMobile, 'USERAGENT-CHROME-VERSION', 'An error occurred:' + error, 'error')
+        return "138.0.7204.50"
     }
 }
 export async function getEdgeVersions(isMobile: boolean) {
@@ -95,7 +90,7 @@ export function getSystemComponents(mobile: boolean): string {
         return `${uaPlatform}; ${osId}; K`
     }
 
-    return `${uaPlatform}; ${osId}`
+    return `${osId}; ${uaPlatform}`
 }
 
 export async function getAppComponents(isMobile: boolean) {

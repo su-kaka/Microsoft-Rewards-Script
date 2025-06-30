@@ -26,7 +26,7 @@ class Browser {
 
     async createBrowser(proxy: AccountProxy, email: string): Promise<BrowserContext> {
         const browser = await playwright.chromium.launch({
-            //channel: 'msedge', // Uses Edge instead of chrome
+            channel: 'msedge', // Uses Edge instead of chrome
             headless: this.bot.config.headless,
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
