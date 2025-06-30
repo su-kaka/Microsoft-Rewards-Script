@@ -87,7 +87,7 @@ export function getSystemComponents(mobile: boolean): string {
     const uaPlatform: string = mobile ? `Android 1${Math.floor(Math.random() * 5)}` : 'Win64; x64'
 
     if (mobile) {
-        return `${uaPlatform}; ${osId}; K`
+        return `${osId}; ${uaPlatform}; K`
     }
 
     return `${osId}; ${uaPlatform}`
