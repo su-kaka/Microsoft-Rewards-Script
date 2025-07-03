@@ -25,6 +25,8 @@ export class Search extends Workers {
     private bingHome = 'https://bing.com'
     /** 当前搜索结果页面URL */
     private searchPageURL = ''
+    /** 首次滚动标志 */
+    private firstScroll: boolean = true;
 
     /**
      * 执行必应搜索任务，获取搜索积分
@@ -53,13 +55,13 @@ export class Search extends Workers {
         // 生成搜索查询词
         // 根据配置决定是否使用地区相关的查询词，从谷歌趋势获取搜索词
         // 定义一个包含目标国家代码的数组，方便后续扩展和维护
-        let googleSearchQueries =[];
+        let googleSearchQueries = [];
         // const targetCountries = ['cn', 'tw', 'hk'];
         const counters = this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : 'US'
         // if ( targetCountries.includes(counters)) {
         if (this.bot.config.searchSettings.useGeoLocaleQueries) {
             googleSearchQueries = await this.getChinaTrends(counters)
-        }else{
+        } else {
             googleSearchQueries = await this.getGoogleTrends(counters)
         }
         this.bot.log(this.bot.isMobile, 'SEARCH-BING', `已完成获取${counters}的搜索词`)
@@ -74,7 +76,7 @@ export class Search extends Workers {
         await page.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
 
         // 等待 2-5 秒
-        await this.bot.utils.waitRandom(2000,5000, 'normal')
+        await this.bot.utils.waitRandom(2000, 5000, 'normal')
 
         // 尝试关闭所有消息弹窗
         await this.bot.browser.utils.tryDismissAllMessages(page)
@@ -191,7 +193,8 @@ export class Search extends Workers {
      */
     private async bingSearch(searchPage: Page, query: string) {
         const platformControlKey = platform() === 'darwin' ? 'Meta' : 'Control'
-
+        //初始每次搜索内容
+        this.firstScroll =true
         // Try a max of 5 times
         for (let i = 0; i < 5; i++) {
             try {
@@ -232,30 +235,24 @@ export class Search extends Workers {
                 await this.bot.browser.utils.reloadBadPage(resultPage)
 
                 // 随机循环1-3次执行滚动和点击操作
-                const loopCount = this.bot.utils.randomNumber(1,3);
+                const loopCount = this.bot.utils.randomNumber(1, 3);
+                this.bot.log(this.bot.isMobile, 'SEARCH-BING', `开始执行第${loopCount}次滚动和点击循环`);
                 for (let i = 0; i < loopCount; i++) {
                     if (this.bot.config.searchSettings.scrollRandomResults) {
-                        await this.bot.utils.waitRandom(2000,5000)
+                        this.bot.log(this.bot.isMobile, 'SEARCH-BING', '执行随机结果滚动');
+                        await this.bot.utils.waitRandom(2000, 5000)
                         await this.humanLikeScroll(resultPage)
                     }
-                    const probability = this.bot.utils.randomNumber(1,100);
-                    //70%的几率随机运行
-                    if (this.bot.config.searchSettings.clickRandomResults && probability <=70) {
+                    const clickProbability = this.bot.utils.randomNumber(1, 100);
+                    // 70%几率点击
+                    if (this.bot.config.searchSettings.clickRandomResults && clickProbability <= 70) {
                         await this.bot.utils.waitRandom(2000,5000)
                         // 模拟人类浏览行为：悬停后点击，增加不确定性
-                        const clickProbability = this.bot.utils.randomNumber(1, 100);
-                        if (clickProbability <= 70) { // 70%几率点击
-                            await this.clickRandomLink(resultPage);
-                        } else if (clickProbability <= 90) { // 20%几率只悬停不点击
-                            const links = await resultPage.$$('a[href]');
-                            if (links.length > 0) {
-                                const randomLink = links[this.bot.utils.randomNumber(0, links.length - 1)];
-                                if (randomLink) await randomLink.hover();
-                                await this.bot.utils.waitRandom(1000, 2000);
-                            }
-                        }
-                    }
 
+                        this.bot.log(this.bot.isMobile, 'SEARCH-BING', `执行随机链接点击 (概率: ${clickProbability}%)`);
+                        await this.clickRandomLink(resultPage);
+                        
+                    }
                     // 循环间添加随机等待（最后一次循环不添加）
                     if (i < loopCount - 1) {
                         await this.bot.utils.waitRandom(3000, 5000);
@@ -271,9 +268,7 @@ export class Search extends Workers {
                 if (i === 5) {
                     this.bot.log(this.bot.isMobile, 'SEARCH-BING', '尝试5次后失败... 发生错误:' + error, 'error')
                     break
-
                 }
-
                 this.bot.log(this.bot.isMobile, 'SEARCH-BING', '搜索失败，发生错误:' + error, 'error')
                 this.bot.log(this.bot.isMobile, 'SEARCH-BING', `重试搜索，尝试 ${i}/5`, 'warn')
 
@@ -281,7 +276,7 @@ export class Search extends Workers {
                 const lastTab = await this.bot.browser.utils.getLatestTab(searchPage)
                 await this.closeTabs(lastTab)
 
-                await this.bot.utils.waitRandom(4000,7000)
+                await this.bot.utils.waitRandom(4000, 7000)
             }
         }
 
@@ -467,19 +462,39 @@ export class Search extends Workers {
      * @param page - 当前页面的Page对象
      */
     private async humanLikeScroll(page: Page) {
-        const scrollHeight = await page.evaluate(() => document.body.scrollHeight);
-        const targetPosition = Math.floor(Math.random() * scrollHeight * 0.8) + 200; // 随机滚动到页面80%以内的位置
+        // 获取当前滚动位置和页面高度
+        const [currentY, scrollHeight, windowHeight] = await Promise.all([
+            page.evaluate(() => window.scrollY),
+            page.evaluate(() => document.body.scrollHeight),
+            page.evaluate(() => window.innerHeight)
+        ]);
+        const maxScroll = scrollHeight - windowHeight;
+        
+        // 计算滚动偏移量，第一次必定向下滚动
+        let offset;
+        if (this.firstScroll) {
+            // 第一次向下滚动100-500像素
+            offset = this.bot.utils.randomNumber(100, 500);
+            this.firstScroll = false;
+        } else {
+            // 随机上下滚动，范围-300到500像素
+            offset = this.bot.utils.randomNumber(-300, 500);
+        }
+        
+        // 计算目标位置，确保在有效范围内
+        const targetPosition = Math.max(0, Math.min(currentY + offset, maxScroll));
         const duration = this.bot.utils.randomNumber(2000, 4000); // 滚动持续时间2-4秒
         const startTime = Date.now();
 
-        await page.evaluate(({ targetPosition, duration, startTime }) => {
+        await page.evaluate(({ currentY, targetPosition, duration, startTime }) => {
             return new Promise(resolve => {
                 const animateScroll = () => {
                     const elapsed = Date.now() - startTime;
                     const progress = Math.min(elapsed / duration, 1);
                     // 使用缓动函数模拟自然加速减速效果
                     const easeProgress = 0.5 - 0.5 * Math.cos(progress * Math.PI);
-                    const currentPosition = easeProgress * targetPosition;
+                    // 从当前位置滚动到目标位置
+                    const currentPosition = currentY + easeProgress * (targetPosition - currentY);
 
                     window.scrollTo(0, currentPosition);
 
@@ -492,7 +507,7 @@ export class Search extends Workers {
 
                 animateScroll();
             });
-        }, { targetPosition, duration, startTime });
+        }, { currentY, targetPosition, duration, startTime });
 
         // 随机停顿1-3秒
         await this.bot.utils.waitRandom(1000, 3000);
@@ -523,28 +538,51 @@ export class Search extends Workers {
      */
     private async clickRandomLink(page: Page) {
         try {
-            await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { }) // Since we don't really care if it did it or not
-
-            // Only used if the browser is not the edge browser (continue on Edge popup)
+            // 获取搜索结果中的标题链接
+            const resultLinks = await page.$$('#b_results .b_algo h2 a');
+            // 筛选可见的链接
+            const visibleLinks = [];
+            for (const link of resultLinks) {
+                if (await link.isVisible()) {
+                    visibleLinks.push(link);
+                }
+            }
+            if (visibleLinks.length <= 0) {
+                return
+            }
+            const randomLink = visibleLinks[this.bot.utils.randomNumber(0, visibleLinks.length - 1)];
+            if (randomLink) await randomLink.hover();
+            await this.bot.utils.waitRandom(1000, 2000);
+            // 30%几率只悬停
+            const clickProbability = this.bot.utils.randomNumber(1, 100);
+            if (clickProbability <= 30) {
+                this.bot.log(this.bot.isMobile, 'SEARCH-BING', `执行只悬停操作并返回 (概率: ${clickProbability}%)`);
+                return
+            }
+            if (randomLink) {
+                await randomLink.click({ timeout: 2000 }).catch(() => { });
+            }
+            
+            // 仅在浏览器不是Edge时使用（继续处理Edge弹窗）
             await this.closeContinuePopup(page)
 
-            // Stay for 10 seconds for page to load and "visit"
-            await this.bot.utils.waitRandom(10000,20000)
+            // 停留10秒让页面加载并完成"访问"
+            await this.bot.utils.waitRandom(10000, 20000)
 
-            // Will get current tab if no new one is created, this will always be the visited site or the result page if it failed to click
+            // 如果没有创建新标签页则获取当前标签页，这通常是访问的网站或点击失败的结果页面
             let lastTab = await this.bot.browser.utils.getLatestTab(page)
 
-            let lastTabURL = new URL(lastTab.url()) // Get new tab info, this is the website we're visiting
+            let lastTabURL = new URL(lastTab.url()) // 获取新标签页信息，这是我们正在访问的网站
 
-            // Check if the URL is different from the original one, don't loop more than 5 times.
+            // 检查URL是否与原始URL不同，循环不超过5次
             let i = 0
             while (lastTabURL.href !== this.searchPageURL && i < 5) {
 
                 await this.closeTabs(lastTab)
 
-                // End of loop, refresh lastPage
-                lastTab = await this.bot.browser.utils.getLatestTab(page) // Finally update the lastTab var again
-                lastTabURL = new URL(lastTab.url()) // Get new tab info
+                // 循环结束，刷新lastPage
+                lastTab = await this.bot.browser.utils.getLatestTab(page) // 最终再次更新lastTab变量
+                lastTabURL = new URL(lastTab.url()) // 获取新标签页信息
                 i++
             }
 
@@ -572,10 +610,10 @@ export class Search extends Workers {
                 // If only 1 tab is open, open a new one to search in
 
                 const newPage = await browser.newPage()
-                await this.bot.utils.waitRandom(1000,4000)
+                await this.bot.utils.waitRandom(1000, 4000)
 
                 await newPage.goto(this.bingHome)
-                await this.bot.utils.waitRandom(3000,5000)
+                await this.bot.utils.waitRandom(3000, 5000)
                 this.searchPageURL = newPage.url()
 
                 this.bot.log(this.bot.isMobile, 'SEARCH-CLOSE-TABS', '只打开了一个标签页，创建了一个新的')
