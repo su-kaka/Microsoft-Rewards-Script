@@ -236,7 +236,7 @@ export class Search extends Workers {
 
                 // 随机循环1-3次执行滚动和点击操作
                 const loopCount = this.bot.utils.randomNumber(1, 3);
-                this.bot.log(this.bot.isMobile, 'SEARCH-BING', `开始执行第${loopCount}次滚动和点击循环`);
+                this.bot.log(this.bot.isMobile, 'SEARCH-BING', `开始执行${loopCount}次滚动和点击循环`);
                 for (let i = 0; i < loopCount; i++) {
                     if (this.bot.config.searchSettings.scrollRandomResults) {
                         this.bot.log(this.bot.isMobile, 'SEARCH-BING', '执行随机结果滚动');
@@ -248,14 +248,13 @@ export class Search extends Workers {
                     if (this.bot.config.searchSettings.clickRandomResults && clickProbability <= 70) {
                         await this.bot.utils.waitRandom(2000,5000)
                         // 模拟人类浏览行为：悬停后点击，增加不确定性
-
                         this.bot.log(this.bot.isMobile, 'SEARCH-BING', `执行随机链接点击 (概率: ${clickProbability}%)`);
                         await this.clickRandomLink(resultPage);
                         
                     }
                     // 循环间添加随机等待（最后一次循环不添加）
                     if (i < loopCount - 1) {
-                        await this.bot.utils.waitRandom(3000, 5000);
+                        await this.bot.utils.waitRandom(10000, 20000);
                     }
                 }
 
@@ -474,7 +473,7 @@ export class Search extends Workers {
         let offset;
         if (this.firstScroll) {
             // 第一次向下滚动100-500像素
-            offset = this.bot.utils.randomNumber(100, 500);
+            offset = this.bot.utils.randomNumber(200, 500);
             this.firstScroll = false;
         } else {
             // 随机上下滚动，范围-300到500像素
@@ -547,7 +546,7 @@ export class Search extends Workers {
     private async clickRandomLink(page: Page) {
         try {
             // 获取搜索结果中的标题链接
-            const resultLinks = await page.$$('#b_results .b_algo h2 a');
+            const resultLinks = await page.locator('#b_results .b_algo h2').all();
             // 筛选可见的链接
             const visibleLinks = [];
             for (const link of resultLinks) {
@@ -556,11 +555,14 @@ export class Search extends Workers {
                 }
             }
             if (visibleLinks.length <= 0) {
+                this.bot.log(this.bot.isMobile, 'SEARCH-BING', `没有可见的链接`);
                 return
             }
             const randomLink = visibleLinks[this.bot.utils.randomNumber(0, visibleLinks.length - 1)];
             if (randomLink) await randomLink.hover();
             await this.bot.utils.waitRandom(1000, 2000);
+            // 取消悬停
+            if (randomLink) await page.mouse.move(0, 0);
             // 30%几率只悬停
             const clickProbability = this.bot.utils.randomNumber(1, 100);
             if (clickProbability <= 30) {
@@ -575,7 +577,7 @@ export class Search extends Workers {
             await this.closeContinuePopup(page)
 
             // 停留10秒让页面加载并完成"访问"
-            await this.bot.utils.waitRandom(10000, 20000)
+            await this.bot.utils.waitRandom(10000, 30000)
 
             // 如果没有创建新标签页则获取当前标签页，这通常是访问的网站或点击失败的结果页面
             let lastTab = await this.bot.browser.utils.getLatestTab(page)
