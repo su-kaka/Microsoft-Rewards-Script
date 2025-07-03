@@ -49,6 +49,7 @@ export class Search extends Workers {
             return
         }
 
+
         // 生成搜索查询词
         // 根据配置决定是否使用地区相关的查询词，从谷歌趋势获取搜索词
         // 定义一个包含目标国家代码的数组，方便后续扩展和维护
@@ -206,13 +207,20 @@ export class Search extends Workers {
 
                 const searchBar = '#sb_form_q'
                 await searchPage.waitForSelector(searchBar, { state: 'visible', timeout: 10000 })
-                await searchPage.click(searchBar) // Focus on the textarea
+                // 模拟鼠标移动到搜索栏并悬停后点击
+                await searchPage.hover(searchBar);
+                await this.bot.utils.waitRandom(200, 500); // 悬停停顿
+                await searchPage.click(searchBar); // Focus on the textarea
                 await this.bot.utils.waitRandom(500,2000, 'normal')
                 await searchPage.keyboard.down(platformControlKey)
                 await searchPage.keyboard.press('A')
                 await searchPage.keyboard.press('Backspace')
                 await searchPage.keyboard.up(platformControlKey)
-                await searchPage.keyboard.type(query)
+                // 模拟人类打字速度，每个字符间添加随机停顿
+                for (const char of query) {
+                    await searchPage.keyboard.type(char);
+                    await this.bot.utils.waitRandom(50, 150); // 50-150ms随机停顿
+                }
                 await searchPage.keyboard.press('Enter')
 
                 await this.bot.utils.waitRandom(3000,5000)
@@ -228,13 +236,24 @@ export class Search extends Workers {
                 for (let i = 0; i < loopCount; i++) {
                     if (this.bot.config.searchSettings.scrollRandomResults) {
                         await this.bot.utils.waitRandom(2000,5000)
-                        await this.randomScroll(resultPage)
+                        await this.humanLikeScroll(resultPage)
                     }
                     const probability = this.bot.utils.randomNumber(1,100);
                     //70%的几率随机运行
                     if (this.bot.config.searchSettings.clickRandomResults && probability <=70) {
                         await this.bot.utils.waitRandom(2000,5000)
-                        await this.clickRandomLink(resultPage)
+                        // 模拟人类浏览行为：悬停后点击，增加不确定性
+                        const clickProbability = this.bot.utils.randomNumber(1, 100);
+                        if (clickProbability <= 70) { // 70%几率点击
+                            await this.clickRandomLink(resultPage);
+                        } else if (clickProbability <= 90) { // 20%几率只悬停不点击
+                            const links = await resultPage.$$('a[href]');
+                            if (links.length > 0) {
+                                const randomLink = links[this.bot.utils.randomNumber(0, links.length - 1)];
+                                if (randomLink) await randomLink.hover();
+                                await this.bot.utils.waitRandom(1000, 2000);
+                            }
+                        }
                     }
 
                     // 循环间添加随机等待（最后一次循环不添加）
@@ -442,6 +461,41 @@ export class Search extends Workers {
         }
 
         return []
+    }
+   /**
+     * 模拟人类滚动行为，包含加速、减速和随机停顿
+     * @param page - 当前页面的Page对象
+     */
+    private async humanLikeScroll(page: Page) {
+        const scrollHeight = await page.evaluate(() => document.body.scrollHeight);
+        const targetPosition = Math.floor(Math.random() * scrollHeight * 0.8) + 200; // 随机滚动到页面80%以内的位置
+        const duration = this.bot.utils.randomNumber(2000, 4000); // 滚动持续时间2-4秒
+        const startTime = Date.now();
+
+        await page.evaluate(({ targetPosition, duration, startTime }) => {
+            return new Promise(resolve => {
+                const animateScroll = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    // 使用缓动函数模拟自然加速减速效果
+                    const easeProgress = 0.5 - 0.5 * Math.cos(progress * Math.PI);
+                    const currentPosition = easeProgress * targetPosition;
+
+                    window.scrollTo(0, currentPosition);
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animateScroll);
+                    } else {
+                        resolve(null);
+                    }
+                };
+
+                animateScroll();
+            });
+        }, { targetPosition, duration, startTime });
+
+        // 随机停顿1-3秒
+        await this.bot.utils.waitRandom(1000, 3000);
     }
 
     /**
