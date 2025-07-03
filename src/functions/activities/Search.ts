@@ -478,7 +478,15 @@ export class Search extends Workers {
             this.firstScroll = false;
         } else {
             // 随机上下滚动，范围-300到500像素
-            offset = this.bot.utils.randomNumber(-300, 500);
+            if (Math.random() < 0.7) { // 70%概率生成绝对值较大的数
+                if (Math.random() < 0.5) {
+                    offset = this.bot.utils.randomNumber(-300, -101);
+                } else {
+                    offset = this.bot.utils.randomNumber(101, 500);
+                }
+            } else { // 30%概率生成中间区间的数
+                offset = this.bot.utils.randomNumber(-100, 100);
+            }
         }
         
         // 计算目标位置，确保在有效范围内
