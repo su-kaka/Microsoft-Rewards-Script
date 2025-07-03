@@ -17,7 +17,7 @@ export class Quiz extends Workers {
                 this.bot.log(this.bot.isMobile, '测验', '测验已开始，尝试完成它')
             }
 
-            await this.bot.utils.waitRandom(2000,5000)
+            await this.bot.utils.waitRandom(2000,5000, 'normal')
 
             let quizData = await this.bot.browser.func.getQuizData(page)
             const questionsRemaining = quizData.maxQuestions - quizData.CorrectlyAnsweredQuestionCount // Amount of questions remaining
@@ -74,12 +74,12 @@ export class Quiz extends Workers {
                             }
                         }
                     }
-                    await this.bot.utils.waitRandom(2000,5000)
+                    await this.bot.utils.waitRandom(2000,5000, 'normal')
                 }
             }
 
             // Done with
-            await this.bot.utils.waitRandom(2000,5000)
+            await this.bot.utils.waitRandom(2000,5000, 'normal')
             await page.close()
 
             this.bot.log(this.bot.isMobile, '测验', '成功完成测验')

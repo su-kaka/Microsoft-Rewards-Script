@@ -13,7 +13,7 @@ export class SearchOnBing extends Workers {
         this.bot.log(this.bot.isMobile, '必应搜索', '正在尝试完成必应搜索')
 
         try {
-            await this.bot.utils.waitRandom(5000,9000)
+            await this.bot.utils.waitRandom(5000,9000, 'normal')
 
             await this.bot.browser.utils.tryDismissAllMessages(page)
 
@@ -22,10 +22,10 @@ export class SearchOnBing extends Workers {
             const searchBar = '#sb_form_q'
             await page.waitForSelector(searchBar, { state: 'visible', timeout: 10000 })
             await page.click(searchBar)
-            await this.bot.utils.waitRandom(500,2000)
+            await this.bot.utils.waitRandom(500,2000, 'normal')
             await page.keyboard.type(query)
             await page.keyboard.press('Enter')
-            await this.bot.utils.waitRandom(3000,5000)
+            await this.bot.utils.waitRandom(3000,5000, 'normal')
 
             await page.close()
 

@@ -28,11 +28,14 @@ export default class BrowserUtil {
             { selector: '#reward_pivot_earn', label: 'Reward Coupon Accept' }
         ]
 
-        for (const button of buttons) {
+        // 随机化按钮点击顺序以模拟人类行为
+        const shuffledButtons = this.bot.utils.shuffleArray([...buttons]);
+
+        for (const button of shuffledButtons) {
             try {
                 const element = button.isXPath ? page.locator(`xpath=${button.selector}`) : page.locator(button.selector)
                 await element.first().click({ timeout: 500 })
-                await page.waitForTimeout(500)
+                await this.bot.utils.waitRandom(300, 800)
 
                 this.bot.log(this.bot.isMobile, '关闭所有消息', `已关闭: ${button.label}`)
 

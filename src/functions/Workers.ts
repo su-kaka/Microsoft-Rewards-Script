@@ -65,7 +65,8 @@ export class Workers {
             await page.goto(punchCard.parentPromotion.destinationUrl, { referer: this.bot.config.baseURL })
 
             // Wait for new page to load, max 10 seconds, however try regardless in case of error
-            await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { })
+            const randomLoadTimeout = this.bot.utils.randomNumber(6000, 10000);
+            await page.waitForLoadState('networkidle', { timeout: randomLoadTimeout }).catch(() => { })
 
             await this.solveActivities(page, activitiesUncompleted, punchCard)
 
@@ -155,7 +156,8 @@ export class Workers {
                 Due to common false timeout on this function, we're ignoring the error regardless, if it worked then it's faster,
                 if it didn't then it gave enough time for the page to load.
                 */
-                await activityPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { })
+                const randomTimeout = this.bot.utils.randomNumber(8000, 12000);
+                await activityPage.waitForLoadState('networkidle', { timeout: randomTimeout }).catch(() => { })
                 await this.bot.utils.waitRandom(2000,5000)
 
                 switch (activity.promotionType) {

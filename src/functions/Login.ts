@@ -71,11 +71,11 @@ export class Login {
     private async execLogin(page: Page, email: string, password: string) {
         try {
             await this.enterEmail(page, email)
-            await this.bot.utils.waitRandom(2000,5000)
+            await this.bot.utils.waitRandom(2000,5000, 'normal')
             await this.bot.browser.utils.reloadBadPage(page)
-            await this.bot.utils.waitRandom(2000,5000)
+            await this.bot.utils.waitRandom(2000,5000, 'normal')
             await this.enterPassword(page, password)
-            await this.bot.utils.waitRandom(2000,5000)
+            await this.bot.utils.waitRandom(2000,5000, 'normal')
 
             // Check if account is locked
             await this.checkAccountLocked(page)
@@ -98,18 +98,22 @@ export class Login {
                 return
             }
 
-            await this.bot.utils.waitRandom(1000,4000)
+            await this.bot.utils.waitRandom(1000,4000, 'normal')
 
             // Check if email is prefilled
             const emailPrefilled = await page.waitForSelector('#userDisplayName', { timeout: 5000 }).catch(() => null)
             if (emailPrefilled) {
                 this.bot.log(this.bot.isMobile, '登录', '微软已预填邮箱')
             } else {
-                // Else clear and fill email
-                await page.fill(emailInputSelector, '')
-                await this.bot.utils.waitRandom(500,2000)
-                await page.fill(emailInputSelector, email)
-                await this.bot.utils.waitRandom(1000,4000)
+                // 模拟人类逐字符输入邮箱
+            await page.fill(emailInputSelector, '')
+            await this.bot.utils.waitRandom(500,2000)
+            await page.focus(emailInputSelector);
+            for (const char of email) {
+                await page.keyboard.type(char);
+                await this.bot.utils.waitRandom(50, 200); // 字符间随机延迟
+            }
+            await this.bot.utils.waitRandom(1000,4000, 'normal')
             }
 
             const nextButton = await page.waitForSelector('button[type="submit"]', { timeout: 2000 }).catch(() => null)
@@ -156,10 +160,21 @@ export class Login {
 
             await this.bot.utils.waitRandom(1000,4000)
 
-            // Clear and fill password
+            // 模拟人类逐字符输入密码
             await page.fill(passwordInputSelector, '')
             await this.bot.utils.waitRandom(500,2000)
-            await page.fill(passwordInputSelector, password)
+            await page.focus(passwordInputSelector);
+            for (const char of password) {
+                await page.keyboard.type(char);
+                await this.bot.utils.waitRandom(50, 250); // 字符间随机延迟
+                // 偶尔模拟输入错误后修正
+                if (Math.random() < 0.05) {
+                    await page.keyboard.press('Backspace');
+                    await this.bot.utils.waitRandom(300, 600);
+                    await page.keyboard.type(char);
+                    await this.bot.utils.waitRandom(50, 200);
+                }
+            }
             await this.bot.utils.waitRandom(1000,4000)
 
             const nextButton = await page.waitForSelector('button[type="submit"]', { timeout: 2000 }).catch(() => null)

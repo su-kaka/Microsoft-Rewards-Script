@@ -156,7 +156,7 @@ export class MicrosoftRewardsBot {
         // 创建浏览器实例，并传入代理信息和账户邮箱
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email);
         // 打开一个新页面测试浏览器防检测
-        this.homePage = await browser.newPage();
+        // this.homePage = await browser.newPage();
         // await this.homePage.goto('https://www.browserscan.net')
         // await this.homePage.goto('https://www.browserscan.net/zh/client-hints')
         // await this.homePage.goto('https://arh.antoinevastel.com/bots/areyouheadless')

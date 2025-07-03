@@ -7,9 +7,9 @@ export default class Util {
             setTimeout(resolve, ms)
         })
     }
-    async waitRandom(min_ms: number,max_ms: number): Promise<void> {
+    async waitRandom(min_ms: number, max_ms: number, distribution: 'uniform' | 'normal' = 'uniform'): Promise<void> {
         return new Promise<void>((resolve) => {
-            setTimeout(resolve, this.randomNumber(min_ms,max_ms))
+            setTimeout(resolve, this.randomNumber(min_ms, max_ms, distribution))
         })
     }
 
@@ -28,8 +28,18 @@ export default class Util {
             .map(({ value }) => value)
     }
 
-    randomNumber(min: number, max: number): number {
-        return Math.floor(Math.random() * (max - min + 1)) + min
+    randomNumber(min: number, max: number, distribution: 'uniform' | 'normal' = 'uniform'): number {
+        if (distribution === 'uniform') {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+        // 正态分布实现 (Box-Muller变换)
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        let num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        num = num / 10.0 + 0.5; // 标准化到0-1范围
+        if (num > 1 || num < 0) num = this.randomNumber(min, max, distribution); // 边界处理
+        return Math.floor(num * (max - min + 1)) + min;
     }
 
     chunkArray<T>(arr: T[], numChunks: number): T[][] {

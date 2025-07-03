@@ -37,7 +37,7 @@ export default class BrowserFunc {
             const maxIterations = 5 // Maximum iterations set to 5
 
             for (let iteration = 1; iteration <= maxIterations; iteration++) {
-                await this.bot.utils.waitRandom(3000,5000)
+                await this.bot.utils.waitRandom(3000,5000, 'normal')
                 await this.bot.browser.utils.tryDismissAllMessages(page)
 
                 // Check if account is suspended
@@ -63,14 +63,14 @@ export default class BrowserFunc {
                 if (currentURL.hostname !== dashboardURL.hostname) {
                     await this.bot.browser.utils.tryDismissAllMessages(page)
 
-                    await this.bot.utils.waitRandom(2000,5000)
+                    await this.bot.utils.waitRandom(2000,5000, 'normal')
                     await page.goto(this.bot.config.baseURL)
                 } else {
                     this.bot.log(this.bot.isMobile, '返回主页', '成功访问主页')
                     break
                 }
 
-                await this.bot.utils.waitRandom(5000,9000)
+                await this.bot.utils.waitRandom(5000,9000, 'normal')
             }
 
         } catch (error) {
@@ -299,7 +299,7 @@ export default class BrowserFunc {
     async waitForQuizRefresh(page: Page): Promise<boolean> {
         try {
             await page.waitForSelector('span.rqMCredits', { state: 'visible', timeout: 10000 })
-            await this.bot.utils.waitRandom(2000,5000)
+            await this.bot.utils.waitRandom(2000,5000, 'normal')
 
             return true
         } catch (error) {
@@ -311,7 +311,7 @@ export default class BrowserFunc {
     async checkQuizCompleted(page: Page): Promise<boolean> {
         try {
             await page.waitForSelector('#quizCompleteContainer', { state: 'visible', timeout: 2000 })
-            await this.bot.utils.waitRandom(2000,5000)
+            await this.bot.utils.waitRandom(2000,5000, 'normal')
 
             return true
         } catch (error) {

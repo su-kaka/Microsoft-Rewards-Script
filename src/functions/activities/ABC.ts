@@ -22,16 +22,16 @@ export class ABC extends Workers {
 
                 await page.waitForSelector(`#${answer}`, { state: 'visible', timeout: 10000 })
 
-                await this.bot.utils.waitRandom(2000,5000)
+                await this.bot.utils.waitRandom(2000,5000, 'normal')
                 await page.click(`#${answer}`) // Click answer
 
-                await this.bot.utils.waitRandom(4000,7000)
+                await this.bot.utils.waitRandom(4000,7000, 'normal')
                 await page.waitForSelector('div.wk_button', { state: 'visible', timeout: 10000 })
                 await page.click('div.wk_button') // Click next question button
 
                 page = await this.bot.browser.utils.getLatestTab(page)
                 $ = await this.bot.browser.func.loadInCheerio(page)
-                await this.bot.utils.waitRandom(1000,4000)
+                await this.bot.utils.waitRandom(1000,4000, 'normal')
             }
 
             await this.bot.utils.waitRandom(4000,7000)

@@ -16,10 +16,21 @@ type GoogleTrendsResponse = [
     ][]
 ];
 
+/**
+ * 搜索任务处理类，负责必应搜索积分获取、搜索词生成及搜索行为模拟
+ * 继承自Workers类，提供搜索相关的核心业务逻辑
+ */
 export class Search extends Workers {
+    /** 必应首页URL */
     private bingHome = 'https://bing.com'
+    /** 当前搜索结果页面URL */
     private searchPageURL = ''
 
+    /**
+     * 执行必应搜索任务，获取搜索积分
+     * @param page - Playwright的Page对象，用于浏览器操作
+     * @param data - 包含用户配置和状态信息的DashboardData对象
+     */
     public async doSearch(page: Page, data: DashboardData) {
         // 记录日志，表明开始进行必应搜索
         this.bot.log(this.bot.isMobile, 'SEARCH-BING', '开始必应搜索')
@@ -61,8 +72,8 @@ export class Search extends Workers {
         // 打开必应搜索页面
         await page.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
 
-        // 等待 2 秒
-        await this.bot.utils.waitRandom(2000,5000)
+        // 等待 2-5 秒
+        await this.bot.utils.waitRandom(2000,5000, 'normal')
 
         // 尝试关闭所有消息弹窗
         await this.bot.browser.utils.tryDismissAllMessages(page)
@@ -171,6 +182,12 @@ export class Search extends Workers {
         this.bot.log(this.bot.isMobile, 'SEARCH-BING', '搜索完成')
     }
 
+    /**
+     * 执行具体的必应搜索操作
+     * @param searchPage - 搜索页面的Page对象
+     * @param query - 搜索关键词
+     * @returns Promise<Counters> - 返回更新后的积分计数器
+     */
     private async bingSearch(searchPage: Page, query: string) {
         const platformControlKey = platform() === 'darwin' ? 'Meta' : 'Control'
 
@@ -190,7 +207,7 @@ export class Search extends Workers {
                 const searchBar = '#sb_form_q'
                 await searchPage.waitForSelector(searchBar, { state: 'visible', timeout: 10000 })
                 await searchPage.click(searchBar) // Focus on the textarea
-                await this.bot.utils.waitRandom(500,2000)
+                await this.bot.utils.waitRandom(500,2000, 'normal')
                 await searchPage.keyboard.down(platformControlKey)
                 await searchPage.keyboard.press('A')
                 await searchPage.keyboard.press('Backspace')
@@ -206,19 +223,29 @@ export class Search extends Workers {
 
                 await this.bot.browser.utils.reloadBadPage(resultPage)
 
-                if (this.bot.config.searchSettings.scrollRandomResults) {
-                    await this.bot.utils.waitRandom(2000,5000)
-                    await this.randomScroll(resultPage)
-                }
+                // 随机循环1-3次执行滚动和点击操作
+                const loopCount = this.bot.utils.randomNumber(1,3);
+                for (let i = 0; i < loopCount; i++) {
+                    if (this.bot.config.searchSettings.scrollRandomResults) {
+                        await this.bot.utils.waitRandom(2000,5000)
+                        await this.randomScroll(resultPage)
+                    }
+                    const probability = this.bot.utils.randomNumber(1,100);
+                    //70%的几率随机运行
+                    if (this.bot.config.searchSettings.clickRandomResults && probability <=70) {
+                        await this.bot.utils.waitRandom(2000,5000)
+                        await this.clickRandomLink(resultPage)
+                    }
 
-                if (this.bot.config.searchSettings.clickRandomResults) {
-                    await this.bot.utils.waitRandom(2000,5000)
-                    await this.clickRandomLink(resultPage)
+                    // 循环间添加随机等待（最后一次循环不添加）
+                    if (i < loopCount - 1) {
+                        await this.bot.utils.waitRandom(3000, 5000);
+                    }
                 }
 
                 // Delay between searches
-                await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min), this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max))))
-
+                // await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min), this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max))))
+                await this.bot.utils.waitRandom(this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min), this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max), 'normal')
                 return await this.bot.browser.func.getSearchPoints()
 
             } catch (error) {
@@ -247,6 +274,11 @@ export class Search extends Workers {
      * 尝试从多个搜索词来源获取搜索词，如果所有来源都失败，则返回默认搜索词。
      * @returns {Promise<GoogleSearch[]>} 返回搜索到的name属性值列表或默认搜索词列表
      */
+    /**
+     * 获取中国地区的热门搜索词（百度、抖音、微博等）
+     * @param geoLocale - 地理区域代码，默认为'US'
+     * @returns Promise<GoogleSearch[]> - 包含主题和相关搜索词的数组
+     */
     private async getChinaTrends(geoLocale: string = 'US'): Promise<GoogleSearch[]> {
 
         const queryTerms: GoogleSearch[] = []
@@ -257,8 +289,8 @@ export class Search extends Workers {
         var default_search_words = ["盛年不重来，一日难再晨", "千里之行，始于足下", "少年易学老难成，一寸光阴不可轻", "敏而好学，不耻下问", "海内存知已，天涯若比邻", "三人行，必有我师焉",
             "莫愁前路无知已，天下谁人不识君", "人生贵相知，何用金与钱", "天生我材必有用", "海纳百川有容乃大；壁立千仞无欲则刚", "穷则独善其身，达则兼济天下", "读书破万卷，下笔如有神",
             "学而不思则罔，思而不学则殆", "一年之计在于春，一日之计在于晨", "莫等闲，白了少年头，空悲切", "少壮不努力，老大徒伤悲", "一寸光阴一寸金，寸金难买寸光阴", "近朱者赤，近墨者黑",
-            "吾生也有涯，而知也无涯", "纸上得来终觉浅，绝知此事要躬行", "学无止境", "己所不欲，勿施于人", "天将降大任于斯人也", "鞠躬尽瘁，死而后已", "书到用时方恨少", "天下兴亡，匹夫有责",
-            "人无远虑，必有近忧", "为中华之崛起而读书", "一日无书，百事荒废", "岂能尽如人意，但求无愧我心", "人生自古谁无死，留取丹心照汗青", "吾生也有涯，而知也无涯", "生于忧患，死于安乐",
+            "吾生也有涯，而知无涯", "纸上得来终觉浅，绝知此事要躬行", "学无止境", "己所不欲，勿施于人", "天将降大任于斯人也", "鞠躬尽瘁，死而后已", "书到用时方恨少", "天下兴亡，匹夫有责",
+            "人无远虑，必有近忧", "为中华之崛起而读书", "一日无书，百事荒废", "岂能尽如人意，但求无愧我心", "人生自古谁无死，留取丹心照汗青", "吾生也有涯，而知无涯", "生于忧患，死于安乐",
             "言必信，行必果", "读书破万卷，下笔如有神", "夫君子之行，静以修身，俭以养德", "老骥伏枥，志在千里", "一日不读书，胸臆无佳想", "王侯将相宁有种乎", "淡泊以明志。宁静而致远,", "卧龙跃马终黄土"]
         //{weibohot}微博热搜榜//{douyinhot}抖音热搜榜/{zhihuhot}知乎热搜榜/{baiduhot}百度热搜榜/{toutiaohot}今日头条热搜榜/
         var keywords_source = ['BaiduHot', 'TouTiaoHot', 'DouYinHot', 'WeiBoHot'];
@@ -280,6 +312,8 @@ export class Search extends Workers {
                 if (!response.ok) {
                     throw new Error('HTTP error! status: ' + response.status); // 如果响应状态不是OK，则抛出错误
                 }
+                this.bot.log(this.bot.isMobile, 'SEARCH-CHINA-TRENDS', `已经获取${source}搜索查询`)
+
                 const data = await response.json(); // 解析响应内容为JSON
     
                 // 显式指定 item 的类型为 any，解决隐式 any 类型的问题
@@ -317,6 +351,11 @@ export class Search extends Workers {
     }
 
 
+    /**
+     * 从谷歌趋势获取热门搜索词
+     * @param geoLocale - 地理区域代码，默认为'US'
+     * @returns Promise<GoogleSearch[]> - 包含主题和相关搜索词的数组
+     */
     private async getGoogleTrends(geoLocale: string = 'US'): Promise<GoogleSearch[]> {
         const queryTerms: GoogleSearch[] = []
         this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `正在生成搜索查询，可能需要一些时间！ | 地理区域: ${geoLocale}`)
@@ -359,6 +398,11 @@ export class Search extends Workers {
         return queryTerms
     }
 
+    /**
+     * 从谷歌趋势响应中提取JSON数据
+     * @param text - 原始响应文本
+     * @returns GoogleTrendsResponse[1] | null - 解析后的趋势数据或null
+     */
     private extractJsonFromResponse(text: string): GoogleTrendsResponse[1] | null {
         const lines = text.split('\n')
         for (const line of lines) {
@@ -375,6 +419,11 @@ export class Search extends Workers {
         return null
     }
 
+    /**
+     * 获取与给定关键词相关的搜索建议
+     * @param term - 基础关键词
+     * @returns Promise<string[]> - 相关搜索词数组
+     */
     private async getRelatedTerms(term: string): Promise<string[]> {
         try {
             const request = {
@@ -395,11 +444,15 @@ export class Search extends Workers {
         return []
     }
 
+    /**
+     * 在搜索结果页面执行随机滚动操作
+     * @param page - 搜索结果页面的Page对象
+     */
     private async randomScroll(page: Page) {
         try {
             const viewportHeight = await page.evaluate(() => window.innerHeight)
             const totalHeight = await page.evaluate(() => document.body.scrollHeight)
-            const randomScrollPosition = Math.floor(Math.random() * (totalHeight - viewportHeight))
+            const randomScrollPosition = this.bot.utils.randomNumber(0, totalHeight - viewportHeight, 'normal')
 
             await page.evaluate((scrollPos) => {
                 window.scrollTo(0, scrollPos)
@@ -410,6 +463,10 @@ export class Search extends Workers {
         }
     }
 
+    /**
+     * 在搜索结果页面随机点击一个链接
+     * @param page - 搜索结果页面的Page对象
+     */
     private async clickRandomLink(page: Page) {
         try {
             await page.click('#b_results .b_algo h2', { timeout: 2000 }).catch(() => { }) // Since we don't really care if it did it or not
@@ -442,6 +499,10 @@ export class Search extends Workers {
         }
     }
 
+    /**
+     * 管理并关闭多余的浏览器标签页
+     * @param lastTab - 当前最后一个标签页的Page对象
+     */
     private async closeTabs(lastTab: Page) {
         const browser = lastTab.context()
         const tabs = browser.pages()
@@ -477,6 +538,11 @@ export class Search extends Workers {
 
     }
 
+    /**
+     * 计算剩余需要获取的搜索积分
+     * @param counters - 包含当前积分进度的Counters对象
+     * @returns number - 剩余积分数量
+     */
     private calculatePoints(counters: Counters) {
         const mobileData = counters.mobileSearch?.[0] // Mobile searches
         const genericData = counters.pcSearch?.[0] // Normal searches
@@ -490,6 +556,10 @@ export class Search extends Workers {
         return missingPoints
     }
 
+    /**
+     * 关闭Edge浏览器可能出现的"继续"弹窗
+     * @param page - 当前操作的Page对象
+     */
     private async closeContinuePopup(page: Page) {
         try {
             await page.waitForSelector('#sacs_close', { timeout: 1000 })
