@@ -12,8 +12,11 @@ export class DailyCheckIn extends Workers {
 
         try {
             let geoLocale = data.userProfile.attributes.country
-            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'us'
-
+            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'cn'
+            if (this.bot.config.searchSettings.useLocale != ""){
+                geoLocale = this.bot.config.searchSettings.useLocale.toLowerCase()
+            }
+            this.bot.log(this.bot.isMobile, '每日签到', '地区:' + geoLocale)
             const jsonData = {
                 amount: 1,
                 country: geoLocale,

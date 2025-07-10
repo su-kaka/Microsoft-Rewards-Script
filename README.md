@@ -9,6 +9,7 @@
 1. 添加了移动端的活动领取-2025年6月24日
 2. 添加了中文热搜内容-2025年6月25日
 3. 优化大量随机性，优化模拟人类操作-2025年7月3日
+4. 允许useLocale设置自定义地区-2025年7月10日
 
 ## 如何自动设置 ##
 1. 下载或克隆源代码
@@ -63,7 +64,8 @@
 |  workers.doReadToEarn    | 是否完成阅读赚取积分任务 | `true`  |
 |  searchOnBingLocalQueries    | 是否使用 `queries.json` 文件或从本仓库获取的查询来完成“在 Bing 上搜索”任务 | `false` （从本仓库获取）   |
 |  globalTimeout    | 操作超时时间 | `30s`   |
-|  searchSettings.useGeoLocaleQueries    | 是否根据你的地理位置生成搜索查询 | `false` （使用美国英语生成的查询）  |
+|  searchSettings.useGeoLocaleQueries    | 是否根据你的地理位置生成搜索查询 | `false` （使用中文生成的查询）  |
+|  searchSettings.useLocale    | 设置的地区 | `cn`  |
 |  searchSettings.scrollRandomResults    | 是否在搜索结果中随机滚动 | `true`   |
 |  searchSettings.clickRandomResults    | 是否访问搜索结果中的随机网站 | `true`   |
 |  searchSettings.searchDelay    | 搜索查询之间的最小和最大时间间隔（毫秒） | `min: 3min`    `max: 5min` |

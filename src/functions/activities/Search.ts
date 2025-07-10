@@ -57,9 +57,9 @@ export class Search extends Workers {
         // 定义一个包含目标国家代码的数组，方便后续扩展和维护
         let googleSearchQueries = [];
         // const targetCountries = ['cn', 'tw', 'hk'];
-        const counters = this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : 'US'
+        const counters = this.bot.config.searchSettings.useGeoLocaleQueries ? data.userProfile.attributes.country : 'cn'
         // if ( targetCountries.includes(counters)) {
-        if (this.bot.config.searchSettings.useGeoLocaleQueries) {
+        if (this.bot.config.searchSettings.useGeoLocaleQueries || this.bot.config.searchSettings.useLocale ==="cn") {
             googleSearchQueries = await this.getChinaTrends(counters)
         } else {
             googleSearchQueries = await this.getGoogleTrends(counters)
@@ -222,7 +222,7 @@ export class Search extends Workers {
                 // 模拟人类打字速度，每个字符间添加随机停顿
                 for (const char of query) {
                     await searchPage.keyboard.type(char);
-                    await this.bot.utils.waitRandom(50, 150); // 50-150ms随机停顿
+                    await this.bot.utils.waitRandom(50, 200); // 50-150ms随机停顿
                 }
                 await searchPage.keyboard.press('Enter')
 
@@ -289,10 +289,10 @@ export class Search extends Workers {
      */
     /**
      * 获取中国地区的热门搜索词（百度、抖音、微博等）
-     * @param geoLocale - 地理区域代码，默认为'US'
+     * @param geoLocale - 地理区域代码，默认为'CN'
      * @returns Promise<GoogleSearch[]> - 包含主题和相关搜索词的数组
      */
-    private async getChinaTrends(geoLocale: string = 'US'): Promise<GoogleSearch[]> {
+    private async getChinaTrends(geoLocale: string = 'CN'): Promise<GoogleSearch[]> {
 
         const queryTerms: GoogleSearch[] = []
         this.bot.log(this.bot.isMobile, 'SEARCH-CHINA-TRENDS', `正在生成搜索查询，可能需要一些时间！ | 地理区域: ${geoLocale}`)
@@ -366,10 +366,10 @@ export class Search extends Workers {
 
     /**
      * 从谷歌趋势获取热门搜索词
-     * @param geoLocale - 地理区域代码，默认为'US'
+     * @param geoLocale - 地理区域代码，默认为'CN'
      * @returns Promise<GoogleSearch[]> - 包含主题和相关搜索词的数组
      */
-    private async getGoogleTrends(geoLocale: string = 'US'): Promise<GoogleSearch[]> {
+    private async getGoogleTrends(geoLocale: string = 'CN'): Promise<GoogleSearch[]> {
         const queryTerms: GoogleSearch[] = []
         this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `正在生成搜索查询，可能需要一些时间！ | 地理区域: ${geoLocale}`)
 
@@ -468,56 +468,130 @@ export class Search extends Workers {
             page.evaluate(() => window.innerHeight)
         ]);
         const maxScroll = scrollHeight - windowHeight;
-        
+
+        // 根据设备类型设置滚动参数
+        let scrollParams;
+        if (this.bot.isMobile) {
+            // 移动设备参数：模拟触摸滑动
+            scrollParams = {
+                minOffset: 200,
+                maxOffset: 500,
+                minDuration: 2000,
+                maxDuration: 4000,
+                minPause: 1000,
+                maxPause: 3000,
+                segments: 1 // 单次滚动
+            };
+        } else {
+            // 电脑设备参数：模拟鼠标滚轮分段滚动
+            scrollParams = {
+                minOffset: 50,
+                maxOffset: 150,
+                minDuration: 500,
+                maxDuration: 1500,
+                minPause: 500,
+                maxPause: 1000,
+                segments: this.bot.utils.randomNumber(2, 4) // 2-4段滚动
+            };
+        }
+
         // 计算滚动偏移量，第一次必定向下滚动
         let offset;
         if (this.firstScroll) {
-            // 第一次向下滚动100-500像素
-            offset = this.bot.utils.randomNumber(200, 500);
+            // 第一次向下滚动
+            offset = this.bot.utils.randomNumber(scrollParams.minOffset, scrollParams.maxOffset);
             this.firstScroll = false;
         } else {
-            // 随机上下滚动，范围-300到500像素
+            // 随机上下滚动
             if (Math.random() < 0.7) { // 70%概率生成绝对值较大的数
                 if (Math.random() < 0.5) {
-                    offset = this.bot.utils.randomNumber(-300, -101);
+                    offset = this.bot.utils.randomNumber(-scrollParams.maxOffset, -scrollParams.minOffset);
                 } else {
-                    offset = this.bot.utils.randomNumber(101, 500);
+                    offset = this.bot.utils.randomNumber(scrollParams.minOffset, scrollParams.maxOffset);
                 }
             } else { // 30%概率生成中间区间的数
-                offset = this.bot.utils.randomNumber(-100, 100);
+                offset = this.bot.utils.randomNumber(-scrollParams.minOffset, scrollParams.minOffset);
             }
         }
         
         // 计算目标位置，确保在有效范围内
-        const targetPosition = Math.max(0, Math.min(currentY + offset, maxScroll));
-        const duration = this.bot.utils.randomNumber(2000, 4000); // 滚动持续时间2-4秒
-        const startTime = Date.now();
+        // 根据设备类型执行不同的滚动策略
+        if (!this.bot.isMobile && scrollParams.segments > 1) {
+            let remainingOffset = offset;
+            let currentPosition = currentY;
+            
+            for (let i = 0; i < scrollParams.segments; i++) {
+                // 计算每段的偏移量，最后一段处理剩余部分
+                const segmentOffset = i < scrollParams.segments - 1 
+                    ? Math.floor(remainingOffset / (scrollParams.segments - i))
+                    : remainingOffset;
+                
+                const targetPosition = Math.max(0, Math.min(currentPosition + segmentOffset, maxScroll));
+                const duration = this.bot.utils.randomNumber(scrollParams.minDuration, scrollParams.maxDuration);
+                const startTime = Date.now();
 
-        await page.evaluate(({ currentY, targetPosition, duration, startTime }) => {
-            return new Promise(resolve => {
-                const animateScroll = () => {
-                    const elapsed = Date.now() - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    // 使用缓动函数模拟自然加速减速效果
-                    const easeProgress = 0.5 - 0.5 * Math.cos(progress * Math.PI);
-                    // 从当前位置滚动到目标位置
-                    const currentPosition = currentY + easeProgress * (targetPosition - currentY);
+                await page.evaluate(({ currentPosition, targetPosition, duration, startTime }) => {
+                    return new Promise(resolve => {
+                        const animateScroll = () => {
+                            const elapsed = Date.now() - startTime;
+                            const progress = Math.min(elapsed / duration, 1);
+                            // 使用缓动函数模拟自然加速减速效果
+                            const easeProgress = 0.5 - 0.5 * Math.cos(progress * Math.PI);
+                            const position = currentPosition + easeProgress * (targetPosition - currentPosition);
+                            
+                            window.scrollTo(0, position);
+                            
+                            if (progress < 1) {
+                                requestAnimationFrame(animateScroll);
+                            } else {
+                                resolve(null);
+                            }
+                        };
+                        
+                        animateScroll();
+                    });
+                }, { currentPosition, targetPosition, duration, startTime });
 
-                    window.scrollTo(0, currentPosition);
+                // 更新当前位置和剩余偏移量
+                currentPosition = targetPosition;
+                remainingOffset -= segmentOffset;
 
-                    if (progress < 1) {
-                        requestAnimationFrame(animateScroll);
-                    } else {
-                        resolve(null);
-                    }
-                };
+                // 段间停顿（最后一段后不停顿）
+                if (i < scrollParams.segments - 1) {
+                    await this.bot.utils.waitRandom(scrollParams.minPause, scrollParams.maxPause);
+                }
+            }
+        } else {
+            // 单次滚动（移动设备或电脑单段滚动）
+            const targetPosition = Math.max(0, Math.min(currentY + offset, maxScroll));
+            const duration = this.bot.utils.randomNumber(scrollParams.minDuration, scrollParams.maxDuration);
+            const startTime = Date.now();
 
-                animateScroll();
-            });
-        }, { currentY, targetPosition, duration, startTime });
+            await page.evaluate(({ currentY, targetPosition, duration, startTime }) => {
+                return new Promise(resolve => {
+                    const animateScroll = () => {
+                        const elapsed = Date.now() - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        // 使用缓动函数模拟自然加速减速效果
+                        const easeProgress = 0.5 - 0.5 * Math.cos(progress * Math.PI);
+                        const position = currentY + easeProgress * (targetPosition - currentY);
+                        
+                        window.scrollTo(0, position);
+                        
+                        if (progress < 1) {
+                            requestAnimationFrame(animateScroll);
+                        } else {
+                            resolve(null);
+                        }
+                    };
+                    
+                    animateScroll();
+                });
+            }, { currentY, targetPosition, duration, startTime });
+        }
 
-        // 随机停顿1-3秒
-        await this.bot.utils.waitRandom(1000, 3000);
+        // 最终停顿
+        await this.bot.utils.waitRandom(scrollParams.minPause, scrollParams.maxPause);
     }
 
     /**

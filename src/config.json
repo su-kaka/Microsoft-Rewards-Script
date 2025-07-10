@@ -22,6 +22,7 @@
     "globalTimeout": "60s",
     "searchSettings": {
         "useGeoLocaleQueries": true,
+        "useLocale": "cn",
         "scrollRandomResults": true,
         "clickRandomResults": true,
         "searchDelay": {
