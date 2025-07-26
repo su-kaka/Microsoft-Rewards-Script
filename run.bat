@@ -1,5 +1,5 @@
 :: 运行脚本
 :: 更改下方目录为项目目??
-d:
+%~d0
 cd %~dp0
 call pnpm start
