@@ -5,23 +5,26 @@
 
 本项目主要内容为本地化处理，主要针对的是中文用户。并在原有基础上完善功能。若有侵权请联系我删除。
 
+本项目所有改动基于win11系统，其他系统未测试。
+
 ## 新增功能 ##
 1. 添加了移动端的活动领取-2025年6月24日
 2. 添加了中文热搜内容-2025年6月25日
 3. 优化大量随机性，优化模拟人类操作-2025年7月3日
 4. 允许useLocale设置自定义地区-2025年7月10日
 5. 添加了日志本地保存功能-2025年7月26日
-## 如何自动设置 ##
+
+## 如何自动设置（二选一/自动） ##
 1. 下载或克隆源代码
 2. win系统运行setup.bat部署环境
-3. 在dist目录下`accounts.json`添加你的账户信息
-4. 按照你的喜好修改dist目录下的 `config.json` 文件
+3. 在dist目录 `accounts.json`添加你的账户信息
+4. 按照你的喜好修改dist目录 `config.json` 文件
 5. 运行 `pnpm start`或运行 `run.bat` 启动构建好的脚本
-## 如何手工设置 ##
+## 如何手工设置（二选一/手动） ##
 1. 下载或克隆源代码
 2. 下载安装nodejs和pnpm环境
 3. 运行 `pnpm i` 安装依赖包
-4. 若Error: browserType.launch: Executable doesn't exist报错执行 pnpm exec playwright install
+4. 若Error: browserType.launch: Executable doesn't exist报错执行 pnpm exec playwright install msedge
 5. 将 `accounts.example.json` 重命名为 `accounts.json`，并添加你的账户信息
 6. 按照你的喜好修改 `config.json` 文件
 7. 运行 `pnpm build` 构建脚本
@@ -29,20 +32,6 @@
 ## 注意事项 ##
 - 如果你在未先关闭浏览器窗口的情况下结束脚本（仅在 `headless` 为 `false` 时），会有 Chrome 进程继续占用资源。你可以使用任务管理器关闭这些进程，或者使用附带的 `pnpm kill-chrome-win` 脚本（Windows 系统）。
 - 如果你要自动化运行此脚本，请设置每天至少运行 2 次，以确保完成所有任务。将 `"runOnZeroPoints": false`，这样在没有可赚取积分时脚本不会运行。
-
-
-### **设置源文件**
-
-1. **下载源代码**
-
-2. **更新 `accounts.json` 文件**
-
-3. **编辑 `config.json` 文件**，确保设置以下值（其他设置可根据你的喜好调整）：
-
-```json
-"headless": true,
-"clusters": 1,
-```
 
 ## 配置 ## 
 | 设置        | 描述           | 默认值  |
