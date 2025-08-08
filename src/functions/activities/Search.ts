@@ -239,7 +239,7 @@ export class Search extends Workers {
                 this.bot.log(this.bot.isMobile, 'SEARCH-BING', `开始执行${loopCount}次滚动和点击循环`);
                 for (let i = 0; i < loopCount; i++) {
                     if (this.bot.config.searchSettings.scrollRandomResults) {
-                        this.bot.log(this.bot.isMobile, 'SEARCH-BING', '执行随机结果滚动');
+                        // this.bot.log(this.bot.isMobile, 'SEARCH-BING', '执行随机结果滚动');
                         await this.bot.utils.waitRandom(2000, 5000)
                         await this.humanLikeScroll(resultPage)
                     }
@@ -248,7 +248,7 @@ export class Search extends Workers {
                     if (this.bot.config.searchSettings.clickRandomResults && clickProbability <= 70) {
                         await this.bot.utils.waitRandom(2000,5000)
                         // 模拟人类浏览行为：悬停后点击，增加不确定性
-                        this.bot.log(this.bot.isMobile, 'SEARCH-BING', `执行随机链接点击 (概率: ${clickProbability}%)`);
+                        // this.bot.log(this.bot.isMobile, 'SEARCH-BING', `执行随机链接点击 (概率: ${clickProbability}%)`);
                         await this.clickRandomLink(resultPage);
                         
                     }
