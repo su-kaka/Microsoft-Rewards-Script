@@ -29,6 +29,33 @@ export class Search extends Workers {
     private firstScroll: boolean = true;
 
     /**
+     * 根据当前时间动态调整搜索延迟
+     * 如果当前时间大于22点，减少延迟以确保能完成所有任务
+     * @returns {object} 包含最小和最大延迟时间的对象
+     */
+    private getDynamicSearchDelay() {
+        const currentHour = new Date().getHours();
+        const originalMinDelay = this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min);
+        const originalMaxDelay = this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max);
+        
+        // 如果当前时间大于22点，减少延迟到原来的30%
+        if (currentHour >= 22) {
+            const reducedMinDelay = Math.floor(originalMinDelay * 0.3);
+            const reducedMaxDelay = Math.floor(originalMaxDelay * 0.3);
+            this.bot.log(this.bot.isMobile, 'SEARCH-DELAY', `当前时间${currentHour}点，启用快速模式，延迟减少到${reducedMinDelay}-${reducedMaxDelay}ms`);
+            return {
+                min: reducedMinDelay,
+                max: reducedMaxDelay
+            };
+        }
+        
+        return {
+            min: originalMinDelay,
+            max: originalMaxDelay
+        };
+    }
+
+    /**
      * 执行必应搜索任务，获取搜索积分
      * @param page - Playwright的Page对象，用于浏览器操作
      * @param data - 包含用户配置和状态信息的DashboardData对象
@@ -226,7 +253,13 @@ export class Search extends Workers {
                 }
                 await searchPage.keyboard.press('Enter')
 
-                await this.bot.utils.waitRandom(3000,5000)
+                // 搜索后等待 - 使用动态延迟
+                const currentHour = new Date().getHours();
+                if (currentHour >= 22) {
+                    await this.bot.utils.waitRandom(1000, 2000);
+                } else {
+                    await this.bot.utils.waitRandom(3000, 5000);
+                }
 
                 // Bing.com in Chrome opens a new tab when searching
                 const resultPage = await this.bot.browser.utils.getLatestTab(searchPage)
@@ -240,27 +273,43 @@ export class Search extends Workers {
                 for (let i = 0; i < loopCount; i++) {
                     if (this.bot.config.searchSettings.scrollRandomResults) {
                         // this.bot.log(this.bot.isMobile, 'SEARCH-BING', '执行随机结果滚动');
-                        await this.bot.utils.waitRandom(2000, 5000)
+                        const currentHour = new Date().getHours();
+                        if (currentHour >= 22) {
+                            await this.bot.utils.waitRandom(500, 1500);
+                        } else {
+                            await this.bot.utils.waitRandom(2000, 5000);
+                        }
                         await this.humanLikeScroll(resultPage)
                     }
                     const clickProbability = this.bot.utils.randomNumber(1, 100);
                     // 70%几率点击
                     if (this.bot.config.searchSettings.clickRandomResults && clickProbability <= 70) {
-                        await this.bot.utils.waitRandom(2000,5000)
+                        const currentHour = new Date().getHours();
+                        if (currentHour >= 22) {
+                            await this.bot.utils.waitRandom(500, 1500);
+                        } else {
+                            await this.bot.utils.waitRandom(2000, 5000);
+                        }
                         // 模拟人类浏览行为：悬停后点击，增加不确定性
                         // this.bot.log(this.bot.isMobile, 'SEARCH-BING', `执行随机链接点击 (概率: ${clickProbability}%)`);
                         await this.clickRandomLink(resultPage);
                         
                     }
-                    // 循环间添加随机等待（最后一次循环不添加）
+                    // 循环间添加随机等待（最后一次循环不添加）- 使用动态延迟
                     if (i < loopCount - 1) {
-                        await this.bot.utils.waitRandom(10000, 20000);
+                        const currentHour = new Date().getHours();
+                        if (currentHour >= 22) {
+                            // 22点后减少循环间等待时间
+                            await this.bot.utils.waitRandom(3000, 6000);
+                        } else {
+                            await this.bot.utils.waitRandom(10000, 20000);
+                        }
                     }
                 }
 
-                // Delay between searches
-                // await this.bot.utils.wait(Math.floor(this.bot.utils.randomNumber(this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min), this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max))))
-                await this.bot.utils.waitRandom(this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min), this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max), 'normal')
+                // Delay between searches - 使用动态延迟
+                const dynamicDelay = this.getDynamicSearchDelay();
+                await this.bot.utils.waitRandom(dynamicDelay.min, dynamicDelay.max, 'normal')
                 return await this.bot.browser.func.getSearchPoints()
 
             } catch (error) {
@@ -275,7 +324,13 @@ export class Search extends Workers {
                 const lastTab = await this.bot.browser.utils.getLatestTab(searchPage)
                 await this.closeTabs(lastTab)
 
-                await this.bot.utils.waitRandom(4000, 7000)
+                // 重试等待 - 使用动态延迟
+                const currentHour = new Date().getHours();
+                if (currentHour >= 22) {
+                    await this.bot.utils.waitRandom(1500, 3000);
+                } else {
+                    await this.bot.utils.waitRandom(4000, 7000);
+                }
             }
         }
 

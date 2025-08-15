@@ -210,6 +210,11 @@ export class MicrosoftRewardsBot {
         log(this.isMobile, 'MAIN-POINTS', `在新标签页中导航到主页务`);
         await this.browser.func.goHome(workerPage);
 
+        // // 如果配置允许，完成打卡任务
+        if (this.config.workers.doPunchCards) {
+            await this.workers.doPunchCard(workerPage, data);
+        }
+
         // 如果配置允许，完成每日任务集
         if (this.config.workers.doDailySet) {
             await this.workers.doDailySet(workerPage, data);
@@ -218,11 +223,6 @@ export class MicrosoftRewardsBot {
         // 如果配置允许，完成更多活动活动
         if (this.config.workers.doMorePromotions) {
             await this.workers.doMorePromotions(workerPage, data);
-        }
-
-        // 如果配置允许，完成打卡任务
-        if (this.config.workers.doPunchCards) {
-            await this.workers.doPunchCard(workerPage, data);
         }
 
         // 如果配置允许，进行桌面端搜索
@@ -277,7 +277,10 @@ export class MicrosoftRewardsBot {
         if (this.config.workers.doDailySet) {
             await this.workers.doDailySet(workerPage, data);
         }
-
+        // 如果配置允许，完成每日任务集-2025年8月15日16:57:56
+        if (this.config.workers.doMorePromotions) {
+            await this.workers.doMorePromotions(workerPage, data);
+        }
 
         // 统计移动端可收集的总积分
         this.pointsCanCollect = browserEnarablePoints.mobileSearchPoints + appEarnablePoints.totalEarnablePoints;
