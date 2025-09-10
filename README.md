@@ -7,6 +7,7 @@
 
 本项目所有改动基于win11系统，其他系统未测试。
 
+！若需要在docker环境运行，可参考原本项目部署。！
 ## 新增功能 ##
 1. 添加了移动端的活动领取-2025年6月24日
 2. 添加了中文热搜内容-2025年6月25日
@@ -16,7 +17,7 @@
 
 ## 如何自动设置（二选一/自动） ##
 1. 下载或克隆源代码
-2. win系统运行setup.bat部署环境
+2. win系统运行setup.bat部署环境（若使用setup.bat报错，请参考手动设置）
 3. 在dist目录 `accounts.json`添加你的账户信息
 4. 按照你的喜好修改dist目录 `config.json` 文件
 5. 运行 `pnpm start`或运行 `run.bat` 启动构建好的脚本
@@ -38,7 +39,7 @@
 | :------------- |:-------------| :-----|
 |  baseURL    | 微软奖励页面 | `https://rewards.bing.com` |
 |  sessionPath    | 会话/指纹存储路径 | `sessions` （在 `./browser/sessions` 目录下） |
-|  headless    | 浏览器窗口是否可见，是否在后台运行 | `false` （浏览器可见） |
+|  headless    | 浏览器窗口是否可见，是否在后台运行，<span style="color: red">若需要docker环境请改为true</span> | `false` （浏览器可见） |
 |  parallel    | 是否并行运行移动设备和桌面端任务 | `true` |
 |  runOnZeroPoints    | 当可赚取积分为 0 时是否继续运行脚本 | `false` （积分为 0 时不运行） |
 |  clusters    | 启动时运行的实例数量，每个账户一个实例 | `1` （一次运行一个账户） |
