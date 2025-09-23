@@ -34,10 +34,10 @@ class Browser {
             } catch { /* silent */ }
         }
 
-		const headless = this.bot.config.headless ? "--headless=new" : ""
+		const headless = this.bot.config.headless ? "--headless" : ""
 		let browser: any
         try {
-	        const browser = await playwright.chromium.launch({
+	        browser = await playwright.chromium.launch({
 	            channel: 'msedge', // Uses Edge instead of chrome
 	            // headless: this.bot.config.headless,
 	            ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
