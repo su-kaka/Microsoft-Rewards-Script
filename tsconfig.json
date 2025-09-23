@@ -40,6 +40,9 @@
         // "noPropertyAccessFromIndexSignature": true,  /* 要求索引签名中的未声明属性使用元素访问。 */
         /* 模块解析选项 */
         "moduleResolution": "node", /* 指定模块解析策略：'node'（Node.js）或'classic'（TypeScript 1.6之前）。 */
+	    "types": ["node"],
+	    "typeRoots": ["./node_modules/@types"],
+	    // Keep explicit typeRoots to ensure resolution in environments that don't auto-detect before full install.
         // "baseUrl": "./",                             /* 解析非绝对模块名称的基本目录。 */
         // "paths": {},                                 /* 一系列条目，用于将导入重新映射到相对于'baseUrl'的查找位置。 */
         // "rootDirs": [],                              /* 根文件夹列表，其组合内容表示运行时项目的结构。 */

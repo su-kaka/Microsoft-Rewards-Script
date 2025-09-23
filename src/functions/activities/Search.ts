@@ -28,32 +28,6 @@ export class Search extends Workers {
     /** 首次滚动标志 */
     private firstScroll: boolean = true;
 
-    /**
-     * 根据当前时间动态调整搜索延迟
-     * 如果当前时间大于22点，减少延迟以确保能完成所有任务
-     * @returns {object} 包含最小和最大延迟时间的对象
-     */
-    private getDynamicSearchDelay() {
-        const currentHour = new Date().getHours();
-        const originalMinDelay = this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min);
-        const originalMaxDelay = this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max);
-        
-        // 如果当前时间大于22点，减少延迟到原来的30%
-        if (currentHour >= 22) {
-            const reducedMinDelay = Math.floor(originalMinDelay * 0.3);
-            const reducedMaxDelay = Math.floor(originalMaxDelay * 0.3);
-            this.bot.log(this.bot.isMobile, 'SEARCH-DELAY', `当前时间${currentHour}点，启用快速模式，延迟减少到${reducedMinDelay}-${reducedMaxDelay}ms`);
-            return {
-                min: reducedMinDelay,
-                max: reducedMaxDelay
-            };
-        }
-        
-        return {
-            min: originalMinDelay,
-            max: originalMaxDelay
-        };
-    }
 
     /**
      * 执行必应搜索任务，获取搜索积分
@@ -511,6 +485,33 @@ export class Search extends Workers {
 
         return []
     }
+        /**
+     * 根据当前时间动态调整搜索延迟
+     * 如果当前时间大于22点，减少延迟以确保能完成所有任务
+     * @returns {object} 包含最小和最大延迟时间的对象
+     */
+    private getDynamicSearchDelay() {
+        const currentHour = new Date().getHours();
+        const originalMinDelay = this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.min);
+        const originalMaxDelay = this.bot.utils.stringToMs(this.bot.config.searchSettings.searchDelay.max);
+        
+        // 如果当前时间大于22点，减少延迟到原来的30%
+        if (currentHour >= 22) {
+            const reducedMinDelay = Math.floor(originalMinDelay * 0.3);
+            const reducedMaxDelay = Math.floor(originalMaxDelay * 0.3);
+            this.bot.log(this.bot.isMobile, 'SEARCH-DELAY', `当前时间${currentHour}点，启用快速模式，延迟减少到${reducedMinDelay}-${reducedMaxDelay}ms`);
+            return {
+                min: reducedMinDelay,
+                max: reducedMaxDelay
+            };
+        }
+        
+        return {
+            min: originalMinDelay,
+            max: originalMaxDelay
+        };
+    }
+
    /**
      * 模拟人类滚动行为，包含加速、减速和随机停顿
      * @param page - 当前页面的Page对象
@@ -659,7 +660,7 @@ export class Search extends Workers {
             const totalHeight = await page.evaluate(() => document.body.scrollHeight)
             const randomScrollPosition = this.bot.utils.randomNumber(0, totalHeight - viewportHeight, 'normal')
 
-            await page.evaluate((scrollPos) => {
+            await page.evaluate((scrollPos: number) => {
                 window.scrollTo(0, scrollPos)
             }, randomScrollPosition)
 

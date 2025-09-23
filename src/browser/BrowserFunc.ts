@@ -93,9 +93,32 @@ export default class BrowserFunc {
                 await this.goHome(this.bot.homePage)
             }
 
-            // Reload the page to get new data
-            await this.bot.homePage.reload({ waitUntil: 'domcontentloaded' })
-
+            let lastError: any = null
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    // Reload the page to get new data
+                    await this.bot.homePage.reload({ waitUntil: 'domcontentloaded' })
+                    lastError = null
+                    break
+                } catch (re) {
+                    lastError = re
+                    const msg = (re instanceof Error ? re.message : String(re))
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Reload failed attempt ${attempt}: ${msg}`, 'warn')
+                    // If page/context closed => bail early after first retry
+                    if (msg.includes('has been closed')) {
+                        if (attempt === 1) {
+                            this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Page appears closed; trying one navigation fallback', 'warn')
+                            try {
+                                await this.goHome(this.bot.homePage)
+                            } catch {/* ignore */}
+                        } else {
+                            break
+                        }
+                    }
+                    if (attempt === 2 && lastError) throw lastError
+                    await this.bot.utils.wait(1000)
+                }
+            }
             const scriptContent = await this.bot.homePage.evaluate(() => {
                 const scripts = Array.from(document.querySelectorAll('script'))
                 const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
@@ -108,7 +131,7 @@ export default class BrowserFunc {
             }
 
             // Extract the dashboard object from the script content
-            const dashboardData = await this.bot.homePage.evaluate(scriptContent => {
+            const dashboardData = await this.bot.homePage.evaluate((scriptContent: string) => {
                 // Extract the dashboard object using regex
                 const regex = /var dashboard = (\{.*?\});/s
                 const match = regex.exec(scriptContent)
@@ -275,7 +298,7 @@ export default class BrowserFunc {
             const html = await page.content()
             const $ = load(html)
 
-            const scriptContent = $('script').filter((index, element) => {
+            const scriptContent = $('script').filter((index: number, element: any) => {
                 return $(element).text().includes('_w.rewardsQuizRenderInfo')
             }).text()
 
@@ -335,7 +358,7 @@ export default class BrowserFunc {
             const html = await page.content()
             const $ = load(html)
 
-            const element = $('.offer-cta').toArray().find(x => x.attribs.href?.includes(activity.offerId))
+            const element = $('.offer-cta').toArray().find((x: any) => x.attribs.href?.includes(activity.offerId))
             if (element) {
                 selector = `a[href*="${element.attribs.href}"]`
             }

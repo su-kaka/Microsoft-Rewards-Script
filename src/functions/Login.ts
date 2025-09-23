@@ -1,4 +1,5 @@
 import { Page } from 'rebrowser-playwright'
+// import type { Page } from 'playwright'
 import readline from 'readline'
 import * as crypto from 'crypto'
 import { AxiosRequestConfig } from 'axios'
@@ -10,8 +11,9 @@ import { OAuth } from '../interface/OAuth'
 
 
 const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
+    // Use as any to avoid strict typing issues with our minimal process shim
+    input: (process as any).stdin,
+    output: (process as any).stdout
 })
 
 export class Login {
@@ -21,7 +23,8 @@ export class Login {
     private redirectUrl: string = 'https://login.live.com/oauth20_desktop.srf'
     private tokenUrl: string = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token'
     private scope: string = 'service::prod.rewardsplatform.microsoft.com::MBI_SSL'
-
+    // Flag to prevent spamming passkey logs after first handling
+    private passkeyHandled: boolean = false
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
     }
@@ -35,7 +38,7 @@ export class Login {
             await page.goto('https://rewards.bing.com/signin')
 
             // Disable FIDO support in login request
-            await page.route('**/GetCredentialType.srf*', (route) => {
+            await page.route('**/GetCredentialType.srf*', (route: any) => {
                 const body = JSON.parse(route.request().postData() || '{}')
                 body.isFidoSupported = false
                 route.continue({ postData: JSON.stringify(body) })
@@ -281,7 +284,7 @@ export class Login {
         this.bot.log(this.bot.isMobile, '登录', '需要 SMS 2FA 代码。等待用户输入...')
 
         const code = await new Promise<string>((resolve) => {
-            rl.question('请输入 2FA 代码:', (input) => {
+            rl.question('请输入 2FA 代码:\n', (input: string) => {
                 rl.close()
                 resolve(input)
             })
@@ -302,22 +305,31 @@ export class Login {
         authorizeUrl.searchParams.append('state', crypto.randomBytes(16).toString('hex'))
         authorizeUrl.searchParams.append('access_type', 'offline_access')
         authorizeUrl.searchParams.append('login_hint', email)
-
+        // 在 OAuth 流程中也禁用 FIDO（可减少通行密钥提示反复弹出）
+        await page.route('**/GetCredentialType.srf*', (route: any) => {
+            const body = JSON.parse(route.request().postData() || '{}')
+            body.isFidoSupported = false
+            route.continue({ postData: JSON.stringify(body) })
+        }).catch(()=>{})
         await page.goto(authorizeUrl.href)
 
         let currentUrl = new URL(page.url())
         let code: string
 
+        const authStart = Date.now()
         this.bot.log(this.bot.isMobile, 'APP 登录', '等待授权...')
         // eslint-disable-next-line no-constant-condition
         while (true) {
+            // Attempt to dismiss passkey/passkey-like screens quickly (non-blocking)
+            await this.tryDismissPasskeyPrompt(page)
             if (currentUrl.hostname === 'login.live.com' && currentUrl.pathname === '/oauth20_desktop.srf') {
                 code = currentUrl.searchParams.get('code')!
                 break
             }
 
             currentUrl = new URL(page.url())
-            await this.bot.utils.waitRandom(5000,9000)
+            // 缩短等待时间，以更快响应通行密钥提示
+            await this.bot.utils.waitRandom(1000,3000)
         }
 
         const body = new URLSearchParams()
@@ -337,8 +349,8 @@ export class Login {
 
         const tokenResponse = await this.bot.axios.request(tokenRequest)
         const tokenData: OAuth = await tokenResponse.data
-
-        this.bot.log(this.bot.isMobile, 'APP 登录', '授权成功')
+        const authDuration = Date.now() - authStart
+        this.bot.log(this.bot.isMobile, 'APP 登录', `授权成功 in ${Math.round(authDuration/1000)}s`)
         return tokenData.access_token
     }
 
@@ -362,27 +374,141 @@ export class Login {
         this.bot.log(this.bot.isMobile, '登录', '成功登录奖励门户')
     }
 
+    private lastNoPromptLog: number = 0
+    private noPromptIterations: number = 0
     private async dismissLoginMessages(page: Page) {
-        // Use Passekey
-        if (await page.waitForSelector('[data-testid="biometricVideo"]', { timeout: 2000 }).catch(() => null)) {
-            const skipButton = await page.$('[data-testid="secondaryButton"]')
+        let didSomething = false
+
+        // PASSKEY / Windows Hello / Sign in faster
+        const passkeyVideo = await page.waitForSelector('[data-testid="biometricVideo"]', { timeout: 1000 }).catch(() => null)
+        if (passkeyVideo) {
+            const skipButton = await page.$('button[data-testid="secondaryButton"]')
             if (skipButton) {
-                await skipButton.click()
-                this.bot.log(this.bot.isMobile, '关闭所有登录消息', '已关闭 "使用 Passekey" 弹窗')
-                await page.waitForTimeout(500)
+                await skipButton.click().catch(()=>{})
+                if (!this.passkeyHandled) {
+                    this.bot.log(this.bot.isMobile, 'LOGIN-PASSKEY', '检测到通行密钥对话框（通过视频启发式判断）→ 已点击“暂时跳过”')
+                }
+                this.passkeyHandled = true
+                await page.waitForTimeout(300)
+                didSomething = true
+            }
+        }
+        if (!didSomething) {
+            const titleEl = await page.waitForSelector('[data-testid="title"]', { timeout: 800 }).catch(() => null)
+            const titleText = (titleEl ? (await titleEl.textContent()) : '')?.trim() || ''
+            const looksLikePasskey = /sign in faster|passkey|fingerprint|face|pin/i.test(titleText)
+            const secondaryBtn = await page.waitForSelector('button[data-testid="secondaryButton"]', { timeout: 500 }).catch(() => null)
+            const primaryBtn = await page.waitForSelector('button[data-testid="primaryButton"]', { timeout: 500 }).catch(() => null)
+            if (looksLikePasskey && secondaryBtn) {
+                await secondaryBtn.click().catch(()=>{})
+                if (!this.passkeyHandled) {
+                    this.bot.log(this.bot.isMobile, 'LOGIN-PASSKEY', `Passkey dialog detected (title: "${titleText}") -> clicked secondary`)
+                }
+                this.passkeyHandled = true
+                await page.waitForTimeout(300)
+                didSomething = true
+            } else if (!didSomething && secondaryBtn && primaryBtn) {
+                const secText = (await secondaryBtn.textContent() || '').trim()
+                if (/skip for now/i.test(secText)) {
+                    await secondaryBtn.click().catch(()=>{})
+                    if (!this.passkeyHandled) {
+                        this.bot.log(this.bot.isMobile, 'LOGIN-PASSKEY', 'Passkey dialog (pair heuristic) -> clicked secondary (Skip for now)')
+                    }
+                    this.passkeyHandled = true
+                    await page.waitForTimeout(300)
+                    didSomething = true
+                }
+            }
+            if (!didSomething) {
+                const skipByText = await page.locator('xpath=//button[contains(normalize-space(.), "Skip for now")]').first()
+                if (await skipByText.isVisible().catch(()=>false)) {
+                    await skipByText.click().catch(()=>{})
+                    if (!this.passkeyHandled) {
+                        this.bot.log(this.bot.isMobile, 'LOGIN-PASSKEY', 'Passkey dialog (text fallback) -> clicked "Skip for now"')
+                    }
+                    this.passkeyHandled = true
+                    await page.waitForTimeout(300)
+                    didSomething = true
+                }
+            }
+            if (!didSomething) {
+                const closeBtn = await page.$('#close-button')
+                if (closeBtn) {
+                    await closeBtn.click().catch(()=>{})
+                    if (!this.passkeyHandled) {
+                        this.bot.log(this.bot.isMobile, 'LOGIN-PASSKEY', 'Attempted close button on potential passkey modal')
+                    }
+                    this.passkeyHandled = true
+                    await page.waitForTimeout(300)
+                }
             }
         }
 
-        // Use Keep me signed in
-        if (await page.waitForSelector('[data-testid="kmsiVideo"]', { timeout: 2000 }).catch(() => null)) {
-            const yesButton = await page.$('[data-testid="primaryButton"]')
+        // KMSI (Keep me signed in) prompt
+        const kmsi = await page.waitForSelector('[data-testid="kmsiVideo"]', { timeout: 800 }).catch(()=>null)
+        if (kmsi) {
+            const yesButton = await page.$('button[data-testid="primaryButton"]')
             if (yesButton) {
-                await yesButton.click()
-                this.bot.log(this.bot.isMobile, '关闭所有登录消息', '已关闭 "保持登录状态" 弹窗')
-                await page.waitForTimeout(500)
+                await yesButton.click().catch(()=>{})
+                this.bot.log(this.bot.isMobile, 'LOGIN-KMSI', 'KMSI dialog detected -> accepted (Yes)')
+                await page.waitForTimeout(300)
+                didSomething = true
             }
         }
 
+        if (!didSomething) {
+            this.noPromptIterations++
+            const now = Date.now()
+            if (this.noPromptIterations === 1 || (now - this.lastNoPromptLog) > 10000) {
+                this.lastNoPromptLog = now
+                this.bot.log(this.bot.isMobile, 'LOGIN-NO-PROMPT', `No dialogs (x${this.noPromptIterations})`)
+                // Reset counter if it grows large to keep number meaningful
+                if (this.noPromptIterations > 50) this.noPromptIterations = 0
+            }
+        } else {
+            // Reset counters after an interaction
+            this.noPromptIterations = 0
+        }
+    }
+
+    /** Lightweight passkey prompt dismissal used in mobile OAuth loop */
+    private async tryDismissPasskeyPrompt(page: Page) {
+        try {
+            // Fast existence checks with very small timeouts to avoid slowing the loop
+            const titleEl = await page.waitForSelector('[data-testid="title"]', { timeout: 500 }).catch(() => null)
+            const secondaryBtn = await page.waitForSelector('button[data-testid="secondaryButton"]', { timeout: 500 }).catch(() => null)
+            // Direct text locator fallback (sometimes data-testid changes)
+            const textSkip = secondaryBtn ? null : await page.locator('xpath=//button[contains(normalize-space(.), "Skip for now")]').first().isVisible().catch(()=>false)
+            if (secondaryBtn) {
+                // Heuristic: if title indicates passkey or both primary/secondary exist with typical text
+                let shouldClick = false
+                let titleText = ''
+                if (titleEl) {
+                    titleText = (await titleEl.textContent() || '').trim()
+                    if (/sign in faster|passkey|fingerprint|face|pin/i.test(titleText)) {
+                        shouldClick = true
+                    }
+                }
+                if (!shouldClick && textSkip) {
+                    shouldClick = true
+                }
+                if (!shouldClick) {
+                    // Fallback text probe on the secondary button itself
+                    const btnText = (await secondaryBtn.textContent() || '').trim()
+                    if (/skip for now/i.test(btnText)) {
+                        shouldClick = true
+                    }
+                }
+                if (shouldClick) {
+                    await secondaryBtn.click().catch(() => { })
+                    if (!this.passkeyHandled) {
+                        this.bot.log(this.bot.isMobile, 'LOGIN-PASSKEY', `Passkey prompt (loop) -> clicked skip${titleText ? ` (title: ${titleText})` : ''}`)
+                    }
+                    this.passkeyHandled = true
+                    await this.bot.utils.wait(500)
+                }
+            }
+        } catch { /* ignore minor errors */ }
     }
 
     private async checkBingLogin(page: Page): Promise<void> {

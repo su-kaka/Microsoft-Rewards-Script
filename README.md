@@ -66,7 +66,8 @@
 |  proxy.proxyBingTerms     | 是否通过设置的代理转发 Bing 搜索词请求 | `true` （将通过代理） |
 |  webhook.enabled     | 是否启用你设置的 Webhook | `false` |
 |  webhook.url     | 你的 Discord Webhook URL | `null` |
-
+|  conclusionWebhook.enabled | 启用或禁用专用于最终摘要的 Webhook | `false` |
+|  conclusionWebhook.url | 仅用于最终摘要的 Discord Webhook URL | `null` |
 ## 功能 ##
 - [x] 多账户支持
 - [x] 会话存储
@@ -74,6 +75,7 @@
 - [x] 无密码登录支持
 - [x] 无头模式支持
 - [x] Discord Webhook 支持
+- [x] 最终摘要 Webhook（专用，可选）
 - [x] 桌面搜索
 - [x] 可配置任务
 - [x] 微软 Edge 搜索

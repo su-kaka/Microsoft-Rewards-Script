@@ -1,4 +1,6 @@
 import cluster from 'cluster'
+// Use Page type from playwright for typings; at runtime rebrowser-playwright extends playwright
+// import type { Page } from 'playwright'
 import { Page } from 'rebrowser-playwright'
 
 import Browser from './browser/Browser'
@@ -15,6 +17,8 @@ import Activities from './functions/Activities'
 
 import { Account } from './interface/Account'
 import Axios from './util/Axios'
+import fs from 'fs'
+import path from 'path'
 
 
 // 主机器人类 - 负责管理Microsoft Rewards自动化任务
@@ -41,6 +45,8 @@ export class MicrosoftRewardsBot {
     private workers: Workers  // 工作线程管理器
     private login = new Login(this)  // 登录处理器
     private accessToken: string = ''  // 访问令牌
+    // Summary collection (per process)
+    private accountSummaries: AccountSummary[] = []
     // 添加 axios 属性
     //@ts-expect-error Will be initialized later
     public axios: Axios
@@ -66,6 +72,7 @@ export class MicrosoftRewardsBot {
     }
 
     async run() {
+        this.printBanner()
         log('main', 'MAIN', `机器人已启动，使用 ${this.config.clusters} 个集群`);
 
         // Only cluster when there's more than 1 cluster demanded
@@ -80,26 +87,66 @@ export class MicrosoftRewardsBot {
         }
     }
 
+    private printBanner() {
+        // Only print once (primary process or single cluster execution)
+        if (this.config.clusters > 1 && !cluster.isPrimary) return
+        try {
+            const pkgPath = path.join(__dirname, '../', 'package.json')
+            let version = 'unknown'
+            if (fs.existsSync(pkgPath)) {
+                const raw = fs.readFileSync(pkgPath, 'utf-8')
+                const pkg = JSON.parse(raw)
+                version = pkg.version || version
+            }
+            const banner = [
+                '  __  __  _____       _____                            _     ',
+                ' |  \/  |/ ____|     |  __ \\                          | |    ',
+                ' | \  / | (___ ______| |__) |_____      ____ _ _ __ __| |___ ',
+                ' | |\/| |\\___ \\______|  _  // _ \\ \\ /\\ / / _` | \'__/ _` / __|',
+                ' | |  | |____) |     | | \\ \\  __/ \\ V  V / (_| | | | (_| \\__ \\',
+                ' |_|  |_|_____/      |_|  \\_\\___| \\_/\\_/ \\__,_|_|  \\__,_|___/',
+                '',
+                ` Version: v${version}`,
+                ''
+            ].join('\n')
+            console.log(banner)
+        } catch { /* ignore banner errors */ }
+    }
+
+    // Return summaries (used when clusters==1)
+    public getSummaries() {
+        return this.accountSummaries
+    }
+
     private runMaster() {
         log('main', 'MAIN-PRIMARY', '主进程已启动');
 
         const accountChunks = this.utils.chunkArray(this.accounts, this.config.clusters);
 
         for (let i = 0; i < accountChunks.length; i++) {
-            const worker = cluster.fork();
-            const chunk = accountChunks[i];
-            worker.send({ chunk });
+            const worker = cluster.fork()
+            const chunk = accountChunks[i]
+            ;(worker as any).send?.({ chunk })
+            // Collect summaries from workers
+            worker.on('message', (msg: any) => {
+                if (msg && msg.type === 'summary' && Array.isArray(msg.data)) {
+                    this.accountSummaries.push(...msg.data)
+                }
+            })
         }
 
-        cluster.on('exit', (worker, code) => {
-            this.activeWorkers -= 1;
+    cluster.on('exit', (worker: any, code: number) => {
+            this.activeWorkers -= 1
 
             log('main', 'MAIN-WORKER', `工作线程 ${worker.process.pid} 已销毁 | 退出码: ${code} | 活跃线程数: ${this.activeWorkers}`, 'warn');
 
             // Check if all workers have exited
             if (this.activeWorkers === 0) {
-                log('main', 'MAIN-WORKER', '所有工作线程已销毁，主进程即将退出！', 'warn');
-                process.exit(0);
+                // All workers done -> send conclusion (if enabled) then exit
+                this.sendConclusion(this.accountSummaries).finally(() => {
+                    log('main', 'MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
+                    process.exit(0)
+                })
             }
         });
     }
@@ -107,9 +154,9 @@ export class MicrosoftRewardsBot {
     private runWorker() {
         log('main', 'MAIN-WORKER', `工作线程 ${process.pid} 已启动`);
         // Receive the chunk of accounts from the master
-        process.on('message', async ({ chunk }) => {
-            await this.runTasks(chunk);
-        });
+    ;(process as any).on('message', async ({ chunk }: { chunk: Account[] }) => {
+            await this.runTasks(chunk)
+        })
     }
 
     private async runTasks(accounts: Account[]) {
@@ -117,50 +164,107 @@ export class MicrosoftRewardsBot {
         for (const account of accounts) {
             // 记录日志，表明开始为该账户执行任务
             log('main', 'MAIN-WORKER', `开始为账户 ${account.email} 执行任务`);
-
+            const accountStart = Date.now()
+            let desktopInitial = 0
+            let mobileInitial = 0
+            let desktopCollected = 0
+            let mobileCollected = 0
+            const errors: string[] = []
             // 初始化 Axios 实例，并传入代理信息
-            this.axios = new Axios(account.proxy);
-            if (this.config.parallel) {
-                // 并行执行桌面端和移动端任务
-                await Promise.all([
-                    this.Desktop(account),
-                    (() => {
-                        // 创建移动端实例
-                        const mobileInstance = new MicrosoftRewardsBot(true);
-                        mobileInstance.axios = this.axios;
-
-                        return mobileInstance.Mobile(account);
-                    })()
-                ]);
-            } else {
-                // 串行执行桌面端和移动端任务
-                this.isMobile = false;
-                await this.Desktop(account);
-
-                this.isMobile = true;
-                await this.Mobile(account);
+            this.axios = new Axios(account.proxy)
+            const verbose = process.env.DEBUG_REWARDS_VERBOSE === '1'
+            const formatFullErr = (label: string, e: any) => {
+                const base = shortErr(e)
+                if (verbose && e instanceof Error) {
+                    return `${label}:${base} :: ${e.stack?.split('\n').slice(0,4).join(' | ')}`
+                }
+                return `${label}:${base}`
             }
 
-            // 记录日志，表明该账户的任务已完成
+            if (this.config.parallel) {
+                const mobileInstance = new MicrosoftRewardsBot(true)
+                mobileInstance.axios = this.axios
+                // Run both and capture results with detailed logging
+                const desktopPromise = this.Desktop(account).catch(e => {
+                    log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
+                    errors.push(formatFullErr('desktop', e)); return null
+                })
+                const mobilePromise = mobileInstance.Mobile(account).catch(e => {
+                    log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
+                    errors.push(formatFullErr('mobile', e)); return null
+                })
+                const [desktopResult, mobileResult] = await Promise.all([desktopPromise, mobilePromise])
+                if (desktopResult) {
+                    desktopInitial = desktopResult.initialPoints
+                    desktopCollected = desktopResult.collectedPoints
+                }
+                if (mobileResult) {
+                    mobileInitial = mobileResult.initialPoints
+                    mobileCollected = mobileResult.collectedPoints
+                }
+            } else {
+                this.isMobile = false
+                const desktopResult = await this.Desktop(account).catch(e => {
+                    log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
+                    errors.push(formatFullErr('desktop', e)); return null
+                })
+                if (desktopResult) {
+                    desktopInitial = desktopResult.initialPoints
+                    desktopCollected = desktopResult.collectedPoints
+                }
+
+                this.isMobile = true
+                const mobileResult = await this.Mobile(account).catch(e => {
+                    log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${e instanceof Error ? e.message : e}`,'error')
+                    errors.push(formatFullErr('mobile', e)); return null
+                })
+                if (mobileResult) {
+                    mobileInitial = mobileResult.initialPoints
+                    mobileCollected = mobileResult.collectedPoints
+                }
+            }
+
+            const accountEnd = Date.now()
+            const durationMs = accountEnd - accountStart
+            const totalCollected = desktopCollected + mobileCollected
+            const initialTotal = (desktopInitial || 0) + (mobileInitial || 0)
+            this.accountSummaries.push({
+                email: account.email,
+                durationMs,
+                desktopCollected,
+                mobileCollected,
+                totalCollected,
+                initialTotal,
+                endTotal: initialTotal + totalCollected,
+                errors
+            })
+
             log('main', 'MAIN-WORKER', `账户 ${account.email} 的任务已完成`, 'log', 'green');
         }
 
-        // 记录日志，表明所有账户的任务已完成
         log(this.isMobile, 'MAIN-PRIMARY', '所有账户的任务已完成', 'log', 'green');
-        // 退出进程
-        process.exit();
+        // Extra diagnostic summary when verbose
+        if (process.env.DEBUG_REWARDS_VERBOSE === '1') {
+            for (const summary of this.accountSummaries) {
+                log('main','SUMMARY-DEBUG',`Account ${summary.email} collected D:${summary.desktopCollected} M:${summary.mobileCollected} TOTAL:${summary.totalCollected} ERRORS:${summary.errors.length ? summary.errors.join(';') : 'none'}`)
+            }
+        }
+        // If in worker mode (clusters>1) send summaries to primary
+        if (this.config.clusters > 1 && !cluster.isPrimary) {
+            if (process.send) {
+                process.send({ type: 'summary', data: this.accountSummaries })
+            }
+        } else {
+            // Single process mode -> build and send conclusion directly
+            await this.sendConclusion(this.accountSummaries)
+        }
+        process.exit()
     }
 
     // 桌面端任务执行方法
     async Desktop(account: Account) {
         // 创建浏览器实例，并传入代理信息和账户邮箱
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email);
-        // 打开一个新页面测试浏览器防检测
-        // this.homePage = await browser.newPage();
-        // await this.homePage.goto('https://www.browserscan.net')
-        // await this.homePage.goto('https://www.browserscan.net/zh/client-hints')
-        // await this.homePage.goto('https://arh.antoinevastel.com/bots/areyouheadless')
-
         // 打开一个新页面
         this.homePage = await browser.newPage();
         // 记录日志，表明开始启动浏览器
@@ -177,7 +281,8 @@ export class MicrosoftRewardsBot {
         const data = await this.browser.func.getDashboardData();
 
         // 记录初始积分
-        this.pointsInitial = data.userStatus.availablePoints;
+        this.pointsInitial = data.userStatus.availablePoints
+        const initial = this.pointsInitial
 
         // 记录当前积分数量
         log(this.isMobile, 'MAIN-POINTS', `当前积分数量: ${this.pointsInitial}`);
@@ -226,16 +331,26 @@ export class MicrosoftRewardsBot {
         }
 
         // 如果配置允许，进行桌面端搜索
+
+        // // 如果配置允许，完成打卡任务
+        if (this.config.workers.doPunchCards) {
+            await this.workers.doPunchCard(workerPage, data);
+        }
+		// Do desktop searches
         if (this.config.workers.doDesktopSearch) {
             await this.activities.doSearch(workerPage, data);
         }
 
         // 保存会话数据
         await saveSessionData(this.config.sessionPath, browser, account.email, this.isMobile);
-
+        // Fetch points BEFORE closing (avoid page closed reload error)
+        const after = await this.browser.func.getCurrentPoints().catch(()=>initial)
         // 关闭桌面浏览器
         await this.browser.func.closeBrowser(browser, account.email);
-        return;
+        return {
+            initialPoints: initial,
+            collectedPoints: (after - initial) || 0
+        }
     }
 
     // 移动端任务执行方法
@@ -257,7 +372,8 @@ export class MicrosoftRewardsBot {
         await this.browser.func.goHome(this.homePage);
 
         // 获取仪表盘数据
-        const data = await this.browser.func.getDashboardData();
+        const data = await this.browser.func.getDashboardData()
+        const initialPoints = data.userStatus.availablePoints || this.pointsInitial || 0
 
         // 获取浏览器端可赚取的积分
         const browserEnarablePoints = await this.browser.func.getBrowserEarnablePoints();
@@ -277,7 +393,7 @@ export class MicrosoftRewardsBot {
         if (this.config.workers.doDailySet) {
             await this.workers.doDailySet(workerPage, data);
         }
-        // 如果配置允许，完成每日任务集-2025年8月15日16:57:56
+        // 如果配置允许，完成每日更多任务集-2025年8月15日16:57:56
         if (this.config.workers.doMorePromotions) {
             await this.workers.doMorePromotions(workerPage, data);
         }
@@ -294,7 +410,10 @@ export class MicrosoftRewardsBot {
 
             // 关闭移动端浏览器
             await this.browser.func.closeBrowser(browser, account.email);
-            return;
+            return {
+                initialPoints: initialPoints,
+                collectedPoints: 0
+            }
         }
 
         // 如果配置允许，进行每日签到
@@ -352,13 +471,113 @@ export class MicrosoftRewardsBot {
         const afterPointAmount = await this.browser.func.getCurrentPoints();
 
         // 记录脚本今天收集的积分数量
-        log(this.isMobile, 'MAIN-POINTS', `脚本今天收集了 ${afterPointAmount - this.pointsInitial} 积分`);
+        log(this.isMobile, 'MAIN-POINTS', `脚本今天收集了 ${afterPointAmount - initialPoints} 积分`);
 
         // 关闭移动端浏览器
         await this.browser.func.closeBrowser(browser, account.email);
-        return;
+        return {
+            initialPoints: initialPoints,
+            collectedPoints: (afterPointAmount - initialPoints) || 0
+        }
     }
 
+    private async sendConclusion(summaries: AccountSummary[]) {
+        const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
+        const cfg = this.config
+        if (!cfg.conclusionWebhook || !cfg.conclusionWebhook.enabled) return
+
+        const totalAccounts = summaries.length
+        if (totalAccounts === 0) return
+
+        let totalCollected = 0
+        let totalInitial = 0
+        let totalEnd = 0
+        let totalDuration = 0
+        let accountsWithErrors = 0
+
+        const accountFields: any[] = []
+        for (const s of summaries) {
+            totalCollected += s.totalCollected
+            totalInitial += s.initialTotal
+            totalEnd += s.endTotal
+            totalDuration += s.durationMs
+            if (s.errors.length) accountsWithErrors++
+
+            const statusEmoji = s.errors.length ? '⚠️' : '✅'
+            const diff = s.totalCollected
+            const duration = formatDuration(s.durationMs)
+            const valueLines: string[] = [
+                `Points: ${s.initialTotal} → ${s.endTotal} ( +${diff} )`,
+                `Breakdown: 🖥️ ${s.desktopCollected} | 📱 ${s.mobileCollected}`,
+                `Duration: ⏱️ ${duration}`
+            ]
+            if (s.errors.length) {
+                valueLines.push(`Errors: ${s.errors.slice(0,2).join(' | ')}`)
+            }
+            accountFields.push({
+                name: `${statusEmoji} ${s.email}`.substring(0, 256),
+                value: valueLines.join('\n').substring(0, 1024),
+                inline: false
+            })
+        }
+
+        const avgDuration = totalDuration / totalAccounts
+        const embed = {
+            title: '🎯 Microsoft Rewards Summary',
+            description: `Processed **${totalAccounts}** account(s)${accountsWithErrors ? ` • ${accountsWithErrors} with issues` : ''}`,
+            color: accountsWithErrors ? 0xFFAA00 : 0x32CD32,
+            fields: [
+                {
+                    name: 'Global Totals',
+                    value: [
+                        `Total Points: ${totalInitial} → ${totalEnd} ( +${totalCollected} )`,
+                        `Average Duration: ${formatDuration(avgDuration)}`,
+                        `Cumulative Runtime: ${formatDuration(totalDuration)}`
+                    ].join('\n')
+                },
+                ...accountFields
+            ].slice(0, 25), // Discord max 25 fields
+            timestamp: new Date().toISOString(),
+            footer: {
+                text: 'Script conclusion webhook'
+            }
+        }
+
+        // Fallback plain text (rare) & embed send
+        const fallback = `Microsoft Rewards Summary\nAccounts: ${totalAccounts}\nTotal: ${totalInitial} -> ${totalEnd} (+${totalCollected})\nRuntime: ${formatDuration(totalDuration)}`
+        await ConclusionWebhook(cfg, fallback, { embeds: [embed] })
+    }
+}
+
+interface AccountSummary {
+    email: string
+    durationMs: number
+    desktopCollected: number
+    mobileCollected: number
+    totalCollected: number
+    initialTotal: number
+    endTotal: number
+    errors: string[]
+}
+
+function shortErr(e: any): string {
+    if (!e) return 'unknown'
+    if (e instanceof Error) return e.message.substring(0, 120)
+    const s = String(e)
+    return s.substring(0, 120)
+}
+
+function formatDuration(ms: number): string {
+    if (!ms || ms < 1000) return `${ms}ms`
+    const sec = Math.floor(ms / 1000)
+    const h = Math.floor(sec / 3600)
+    const m = Math.floor((sec % 3600) / 60)
+    const s = sec % 60
+    const parts: string[] = []
+    if (h) parts.push(`${h}h`)
+    if (m) parts.push(`${m}m`)
+    if (s) parts.push(`${s}s`)
+    return parts.join(' ') || `${ms}ms`
 }
 
 async function main() {

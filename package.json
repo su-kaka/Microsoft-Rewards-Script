@@ -12,6 +12,7 @@
     "start": "node ./dist/index.js",
     "ts-start": "ts-node ./src/index.ts",
     "dev": "ts-node ./src/index.ts -dev",
+    "setup": "node ./setup/setup.mjs",
     "kill-chrome-win": "powershell -Command \"Get-Process | Where-Object { $_.MainModule.FileVersionInfo.FileDescription -eq 'Google Chrome for Testing' } | ForEach-Object { Stop-Process -Id $_.Id -Force }\"",
     "create-docker": "docker build -t microsoft-rewards-script-docker ."
   },
@@ -27,6 +28,7 @@
   "author": "Netsky",
   "license": "ISC",
   "devDependencies": {
+    "@types/node": "^24.5.2",
     "@types/ms": "^0.7.34",
     "@typescript-eslint/eslint-plugin": "^7.17.0",
     "eslint": "^8.57.0",
@@ -43,8 +45,8 @@
     "http-proxy-agent": "^7.0.2",
     "https-proxy-agent": "^7.0.6",
     "ms": "^2.1.3",
-    "playwright": "1.47.2",
-    "rebrowser-playwright": "1.47.2",
+    "playwright": "1.52.0",
+    "rebrowser-playwright": "1.52.0",
     "socks-proxy-agent": "^8.0.5",
     "ts-node": "^10.9.2"
   }
