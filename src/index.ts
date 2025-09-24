@@ -356,6 +356,7 @@ export class MicrosoftRewardsBot {
 
     // 移动端任务执行方法
     async Mobile(account: Account) {
+        log(false,'FLOW','Mobile() invoked')
         // 创建浏览器实例，并传入代理信息和账户邮箱
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email);
         // 打开一个新页面
