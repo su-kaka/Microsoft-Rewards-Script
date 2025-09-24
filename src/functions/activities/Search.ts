@@ -22,7 +22,7 @@ type GoogleTrendsResponse = [
  */
 export class Search extends Workers {
     /** 必应首页URL */
-    private bingHome = 'https://bing.com'
+    private bingHome = 'https://www.bing.com'
     /** 当前搜索结果页面URL */
     private searchPageURL = ''
     /** 首次滚动标志 */
@@ -254,6 +254,7 @@ export class Search extends Workers {
                             await this.bot.utils.waitRandom(2000, 5000);
                         }
                         await this.humanLikeScroll(resultPage)
+                        
                     }
                     const clickProbability = this.bot.utils.randomNumber(1, 100);
                     // 70%几率点击
@@ -518,12 +519,8 @@ export class Search extends Workers {
      */
     private async humanLikeScroll(page: Page) {
         // 获取当前滚动位置和页面高度
-        const [currentY, scrollHeight, windowHeight] = await Promise.all([
-            page.evaluate(() => window.scrollY),
-            page.evaluate(() => document.body.scrollHeight),
-            page.evaluate(() => window.innerHeight)
-        ]);
-        const maxScroll = scrollHeight - windowHeight;
+        const currentY =  await page.evaluate(() => window.scrollY)
+        const maxScroll = await page.evaluate(() => document.body.scrollHeight) - await page.evaluate(() => window.innerHeight);
 
         // 根据设备类型设置滚动参数
         let scrollParams;
