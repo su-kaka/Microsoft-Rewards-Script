@@ -33,13 +33,14 @@
 ## 注意事项 ##
 - 如果你在未先关闭浏览器窗口的情况下结束脚本（仅在 `headless` 为 `false` 时），会有 Chrome 进程继续占用资源。你可以使用任务管理器关闭这些进程，或者使用附带的 `pnpm kill-chrome-win` 脚本（Windows 系统）。
 - 如果你要自动化运行此脚本，请设置每天至少运行 2 次，以确保完成所有任务。将 `"runOnZeroPoints": false`，这样在没有可赚取积分时脚本不会运行。
+- 如果出现无法自动登录情况，请在代码执行登录过程中手动完成网页的登录，等待代码自动完成剩下流程。登录信息保存在sessions目录（需要多备份），后续运行根据该目录的会话文件来运行。
 
 ## 配置 ## 
 | 设置        | 描述           | 默认值  |
 | :------------- |:-------------| :-----|
 |  baseURL    | 微软奖励页面 | `https://rewards.bing.com` |
 |  sessionPath    | 会话/指纹存储路径 | `sessions` （在 `./browser/sessions` 目录下） |
-|  headless    | 浏览器窗口是否可见，是否在后台运行，<span style="color: red">若需要docker环境请改为true</span> | `false` （浏览器可见） |
+|  headless    | 浏览器窗口是否可见，是否在后台运行，若需要docker环境请改为true | `false` （浏览器可见） |
 |  parallel    | 是否并行运行移动设备和桌面端任务 | `true` |
 |  runOnZeroPoints    | 当可赚取积分为 0 时是否继续运行脚本 | `false` （积分为 0 时不运行） |
 |  clusters    | 启动时运行的实例数量，每个账户一个实例 | `1` （一次运行一个账户） |
