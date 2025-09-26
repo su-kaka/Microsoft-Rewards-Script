@@ -33,7 +33,7 @@ export class Login {
 
         try {
             this.bot.log(this.bot.isMobile, '登录', '开始登录流程!')
-
+            
             // Navigate to the Bing login page
             await page.goto('https://rewards.bing.com/signin')
 

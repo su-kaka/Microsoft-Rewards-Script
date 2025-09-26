@@ -434,7 +434,9 @@ export class MicrosoftRewardsBot {
             // 如果没有找到移动端搜索数据，可能是新账户，停止执行
             if (data.userStatus.counters.mobileSearch) {
                 // 打开一个新标签页，用于完成任务
-                const workerPage = await browser.newPage();
+                if(browser.pages().length < 2){
+                    const workerPage = await browser.newPage();
+                }
 
                 // 在新标签页中导航到主页
                 await this.browser.func.goHome(workerPage);
