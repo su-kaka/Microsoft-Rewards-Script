@@ -28,8 +28,9 @@
   "author": "Netsky",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^24.5.2",
+    "@playwright/test": "^1.55.1",
     "@types/ms": "^0.7.34",
+    "@types/node": "^24.5.2",
     "@typescript-eslint/eslint-plugin": "^7.17.0",
     "eslint": "^8.57.0",
     "eslint-plugin-modules-newline": "^0.0.6",
@@ -45,8 +46,8 @@
     "http-proxy-agent": "^7.0.2",
     "https-proxy-agent": "^7.0.6",
     "ms": "^2.1.3",
-    "playwright": "1.55.1",
-    "rebrowser-playwright": "1.52.0",
+    "playwright": "1.47.2",
+    "rebrowser-playwright": "1.47.2",
     "socks-proxy-agent": "^8.0.5",
     "ts-node": "^10.9.2"
   }

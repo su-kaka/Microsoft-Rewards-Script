@@ -36,9 +36,10 @@ class Browser {
 
 		let browser: any
         try {
+                const headless = this.bot.config.headless ? "--headless" : ""
             	browser = await playwright.chromium.launch({
 	            channel: 'msedge', // Uses Edge instead of chrome
-	            headless: this.bot.config.headless,
+	            // headless: this.bot.config.headless,
 	            ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
 	            args: [
 	                '--no-sandbox',
@@ -46,7 +47,9 @@ class Browser {
 	                '--disable-setuid-sandbox',
 	                '--ignore-certificate-errors',
 	                '--ignore-certificate-errors-spki-list',
-	                '--ignore-ssl-errors',
+	                '--ignore-ssl-errors'
+                    ,
+                    `${headless}`
 	            ]
 	        })
         } catch (e: any) {
