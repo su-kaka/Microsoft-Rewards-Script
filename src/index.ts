@@ -390,6 +390,11 @@ export class MicrosoftRewardsBot {
         // 在新标签页中导航到主页-2025年6月23日17:15:13
         log(this.isMobile, 'MAIN-POINTS', `在新标签页中导航到主页务`);
         await this.browser.func.goHome(workerPage);
+        
+        // 如果配置允许，进行每日签到
+        if (this.config.workers.doDailyCheckIn) {
+            await this.activities.doDailyCheckIn(this.accessToken, data);
+        }
 
         // 如果配置允许，完成每日任务集-2025年6月23日17:15:13
         if (this.config.workers.doDailySet) {

@@ -9,19 +9,26 @@ import { DashboardData } from '../../interface/DashboardData'
 export class DailyCheckIn extends Workers {
     public async doDailyCheckIn(accessToken: string, data: DashboardData) {
         this.bot.log(this.bot.isMobile, '每日签到', '开始每日签到')
+        let geoLocale = data.userProfile.attributes.country
+        geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'cn'
+        if (this.bot.config.searchSettings.useLocale != ""){
+            geoLocale = this.bot.config.searchSettings.useLocale.toLowerCase()
+        }
+        this.bot.log(this.bot.isMobile, '每日签到', '地区:' + geoLocale)
+        await this.DailyCheckIn(accessToken, geoLocale, 101);
+        // await this.DailyCheckIn(accessToken, geoLocale, 103);
+
+
+    }
+
+    private async DailyCheckIn(accessToken: string, geoLocale: string,my_type:number) {
 
         try {
-            let geoLocale = data.userProfile.attributes.country
-            geoLocale = (this.bot.config.searchSettings.useGeoLocaleQueries && geoLocale.length === 2) ? geoLocale.toLowerCase() : 'cn'
-            if (this.bot.config.searchSettings.useLocale != ""){
-                geoLocale = this.bot.config.searchSettings.useLocale.toLowerCase()
-            }
-            this.bot.log(this.bot.isMobile, '每日签到', '地区:' + geoLocale)
             const jsonData = {
                 amount: 1,
                 country: geoLocale,
                 id: randomBytes(64).toString('hex'),
-                type: 101,
+                type: my_type,
                 attributes: {
                     offerid: 'Gamification_Sapphire_DailyCheckIn'
                 }
@@ -46,6 +53,5 @@ export class DailyCheckIn extends Workers {
         } catch (error) {
             this.bot.log(this.bot.isMobile, '每日签到', '发生错误:' + error, 'error')
         }
-    }
-
+    } 
 }
