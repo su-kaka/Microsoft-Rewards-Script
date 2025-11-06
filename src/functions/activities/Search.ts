@@ -71,7 +71,12 @@ export class Search extends Workers {
         googleSearchQueries = this.bot.utils.shuffleArray(googleSearchQueries)
 
         // 对搜索词去重
-        googleSearchQueries = [...new Set(googleSearchQueries)]
+        const seen = new Set<string>()
+        googleSearchQueries = googleSearchQueries.filter(q => {
+            if (seen.has(q.topic.toLowerCase())) return false
+            seen.add(q.topic.toLowerCase())
+            return true
+        })
 
         // 打开必应搜索页面
         await page.goto(this.searchPageURL ? this.searchPageURL : this.bingHome)
@@ -83,7 +88,7 @@ export class Search extends Workers {
         await this.bot.browser.utils.tryDismissAllMessages(page)
 
         // 最大循环次数，用于判断搜索是否卡住
-        let maxLoop = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it doesn't continue after 5 more searches with alternative queries, abort search
+        let stagnation = 0 // If the loop hits 10 this when not gaining any points, we're assuming it's stuck. If it doesn't continue after 5 more searches with alternative queries, abort search
 
         // 存储搜索查询词的数组
         const queries: string[] = []
@@ -103,9 +108,9 @@ export class Search extends Workers {
 
             // 如果新的积分数量和之前相同，说明没有获得新积分
             if (newMissingPoints == missingPoints) {
-                maxLoop++ // Add to max loop
+                stagnation++ // Add to max loop
             } else { // There has been a change in points
-                maxLoop = 0 // Reset the loop
+                stagnation = 0 // Reset the loop
             }
 
             missingPoints = newMissingPoints
@@ -116,17 +121,17 @@ export class Search extends Workers {
             }
 
             // 仅针对移动端搜索
-            if (maxLoop > 5 && this.bot.isMobile) {
+            if (stagnation > 5 && this.bot.isMobile) {
                 // 记录警告日志，搜索 5 次没有获得积分，可能是 User-Agent 有问题
                 this.bot.log(this.bot.isMobile, 'SEARCH-BING', '搜索5次未获得积分，可能是User-Agent有问题', 'warn')
                 break
             }
 
             // 如果 10 次循环都没有获得积分，假设搜索卡住了
-            if (maxLoop > 10) {
+            if (stagnation > 10) {
                 // 记录警告日志，搜索 10 次没有获得积分，停止搜索
                 this.bot.log(this.bot.isMobile, 'SEARCH-BING', '搜索10次未获得积分，中止搜索', 'warn')
-                maxLoop = 0 // Reset to 0 so we can retry with related searches below
+                stagnation = 0 // Reset to 0 so we can retry with related searches below
                 break
             }
         }
@@ -142,8 +147,11 @@ export class Search extends Workers {
             this.bot.log(this.bot.isMobile, 'SEARCH-BING', `搜索完成但仍缺少 ${missingPoints} 积分，正在生成额外搜索`)
 
             let i = 0
-            while (missingPoints > 0) {
+            let fallbackRounds = 0
+            const extraRetries = this.bot.config.searchSettings.extraFallbackRetries || 1
+            while (missingPoints > 0 && fallbackRounds <= extraRetries) {
                 const query = googleSearchQueries[i++] as GoogleSearch
+                if (!query) break
 
                 // 获取与谷歌搜索查询词相关的搜索词
                 const relatedTerms = await this.getRelatedTerms(query?.topic)
@@ -158,10 +166,11 @@ export class Search extends Workers {
                         const newMissingPoints = this.calculatePoints(searchCounters)
 
                         // 如果新的积分数量和之前相同，说明没有获得新积分
-                        if (newMissingPoints == missingPoints) {
-                            maxLoop++ // Add to max loop
-                        } else { // There has been a change in points
-                            maxLoop = 0 // Reset the loop
+                        if (newMissingPoints === missingPoints) {
+                            stagnation++
+                        } else {
+                            stagnation = 0
+                        }
                         }
 
                         missingPoints = newMissingPoints
@@ -172,15 +181,15 @@ export class Search extends Workers {
                         }
 
                         // 尝试 5 次后，如果还是没有获得积分，停止搜索
-                        if (maxLoop > 5) {
+                        if (stagnation > 5) {
                             // 记录警告日志，额外搜索 5 次没有获得积分，停止搜索
                             this.bot.log(this.bot.isMobile, 'SEARCH-BING-EXTRA', '额外搜索5次未获得积分，中止搜索', 'warn')
                             return
                         }
                     }
+                fallbackRounds++
                 }
             }
-        }
 
         // 记录日志，表明搜索完成
         this.bot.log(this.bot.isMobile, 'SEARCH-BING', '搜索完成')
@@ -210,23 +219,37 @@ export class Search extends Workers {
                 await this.bot.utils.waitRandom(500,2000)
 
                 const searchBar = '#sb_form_q'
-                await searchPage.waitForSelector(searchBar, { state: 'visible', timeout: 10000 })
+                const box = searchPage.locator(searchBar)
+                await box.waitFor({ state: 'attached', timeout: 15000 })
+
                 // 模拟鼠标移动到搜索栏并悬停后点击
+                await this.bot.browser.utils.tryDismissAllMessages(searchPage)
                 await searchPage.hover(searchBar);
                 await this.bot.utils.waitRandom(200, 500); // 悬停停顿
                 await searchPage.click(searchBar); // Focus on the textarea
-                await this.bot.utils.waitRandom(500,2000, 'normal')
-                await searchPage.keyboard.down(platformControlKey)
-                await searchPage.keyboard.press('A')
-                await searchPage.keyboard.press('Backspace')
-                await searchPage.keyboard.up(platformControlKey)
-                // 模拟人类打字速度，每个字符间添加随机停顿
-                for (const char of query) {
-                    await searchPage.keyboard.type(char);
-                    await this.bot.utils.waitRandom(50, 200); // 50-150ms随机停顿
+                let navigatedDirectly = false
+                try {
+                    // Try focusing and filling instead of clicking (more reliable on mobile)
+                    await box.focus({ timeout: 2000 }).catch(() => { /* ignore focus errors */ })
+                    await box.fill('')
+                    await this.bot.utils.waitRandom(500,2000, 'normal')
+                    await searchPage.keyboard.down(platformControlKey)
+                    await searchPage.keyboard.press('A')
+                    await searchPage.keyboard.press('Backspace')
+                    await searchPage.keyboard.up(platformControlKey)
+                    // 模拟人类打字速度，每个字符间添加随机停顿
+                    for (const char of query) {
+                        await searchPage.keyboard.type(char);
+                        await this.bot.utils.waitRandom(50, 200); // 50-150ms随机停顿
+                    }
+                    await searchPage.keyboard.press('Enter')
+                } catch (typeErr) {
+                    // As a robust fallback, navigate directly to the search results URL
+                    const q = encodeURIComponent(query)
+                    const url = `https://www.bing.com/search?q=${q}`
+                    await searchPage.goto(url)
+                    navigatedDirectly = true
                 }
-                await searchPage.keyboard.press('Enter')
-
                 // 搜索后等待 - 使用动态延迟
                 const currentHour = new Date().getHours();
                 if (currentHour >= 22) {
@@ -410,7 +433,7 @@ export class Search extends Workers {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
                 },
-                data: `f.req=[[[i0OFE,"["null", null, \"${geoLocale.toUpperCase()}\", 0, null, 48]"]]]`
+                data: `f.req=[[[i0OFE,"[null, null, \\"${geoLocale.toUpperCase()}\\", 0, null, 48]"]]]`
             }
 
             const response = await this.bot.axios.request(request, this.bot.config.proxy.proxyGoogleTrends)
@@ -422,7 +445,9 @@ export class Search extends Workers {
             }
 
             const mappedTrendsData = trendsData.map(query => [query[0], query[9]!.slice(1)])
-            if (mappedTrendsData.length < 90) {
+            this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', `Found ${mappedTrendsData.length} search queries for ${geoLocale}`)
+
+            if (mappedTrendsData.length < 30 && geoLocale.toUpperCase() !== 'US') {
                 this.bot.log(this.bot.isMobile, 'SEARCH-GOOGLE-TRENDS', '搜索查询不足，回退到中国地区', 'warn')
                 return this.getChinaTrends()
             }

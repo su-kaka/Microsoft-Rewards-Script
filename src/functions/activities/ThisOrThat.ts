@@ -1,6 +1,7 @@
 import { Page } from 'rebrowser-playwright'
 
 import { Workers } from '../Workers'
+import { DELAYS } from '../../constants'
 
 
 export class ThisOrThat extends Workers {
@@ -11,7 +12,7 @@ export class ThisOrThat extends Workers {
 
         try {
             // Check if the quiz has been started or not
-            const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { state: 'visible', timeout: 2000 }).then(() => true).catch(() => false)
+            const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { state: 'visible', timeout: DELAYS.THIS_OR_THAT_START }).then(() => true).catch(() => false)
             if (quizNotStarted) {
                 await page.click('#rqStartQuiz')
             } else {

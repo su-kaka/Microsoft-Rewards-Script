@@ -1,6 +1,7 @@
 import { Page } from 'rebrowser-playwright'
 
 import { Workers } from '../Workers'
+import { RETRY_LIMITS, TIMEOUTS } from '../../constants'
 
 
 export class ABC extends Workers {
@@ -11,11 +12,9 @@ export class ABC extends Workers {
         try {
             let $ = await this.bot.browser.func.loadInCheerio(page)
 
-            // Don't loop more than 15 in case unable to solve, would lock otherwise
-            const maxIterations = 15
             let i
-            for (i = 0; i < maxIterations && !$('span.rw_icon').length; i++) {
-                await page.waitForSelector('.wk_OptionClickClass', { state: 'visible', timeout: 10000 })
+            for (i = 0; i < RETRY_LIMITS.ABC_MAX && !$('span.rw_icon').length; i++) {
+                await page.waitForSelector('.wk_OptionClickClass', { state: 'visible', timeout: TIMEOUTS.DASHBOARD_WAIT })
 
                 const answers = $('.wk_OptionClickClass')
                 const answer = answers[this.bot.utils.randomNumber(0, 2)]?.attribs['id']

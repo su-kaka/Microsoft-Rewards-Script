@@ -1,6 +1,7 @@
 import { Page } from 'rebrowser-playwright'
 
 import { Workers } from '../Workers'
+import { TIMEOUTS } from '../../constants'
 
 
 export class Poll extends Workers {
@@ -11,7 +12,9 @@ export class Poll extends Workers {
         try {
             const buttonId = `#btoption${Math.floor(this.bot.utils.randomNumber(0, 1))}`
 
-            await page.waitForSelector(buttonId, { state: 'visible', timeout: 10000 }).catch(() => { }) // We're gonna click regardless or not
+            await page.waitForSelector(buttonId, { state: 'visible', timeout: 10000 }).catch((e) => {
+                this.bot.log(this.bot.isMobile, 'POLL', `Could not find poll button: ${e}`, 'warn')
+            })
             await this.bot.utils.waitRandom(2000,5000)
 
             await page.click(buttonId)

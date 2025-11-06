@@ -3,14 +3,22 @@ import ms from 'ms'
 export default class Util {
 
     async wait(ms: number): Promise<void> {
+        // Safety check: prevent extremely long or negative waits
+        const MAX_WAIT_MS = 3600000 // 1 hour max
+        const safeMs = Math.min(Math.max(0, ms), MAX_WAIT_MS)
+        
+        if (ms !== safeMs) {
+            console.warn(`[Utils] wait() clamped from ${ms}ms to ${safeMs}ms (max: ${MAX_WAIT_MS}ms)`)
+        }
+        
         return new Promise<void>((resolve) => {
-            setTimeout(resolve, ms)
+            setTimeout(resolve, safeMs)
         })
     }
-    async waitRandom(min_ms: number, max_ms: number, distribution: 'uniform' | 'normal' = 'uniform'): Promise<void> {
-        return new Promise<void>((resolve) => {
-            setTimeout(resolve, this.randomNumber(min_ms, max_ms, distribution))
-        })
+
+    async waitRandom(minMs: number, maxMs: number): Promise<void> {
+        const delta = this.randomNumber(minMs, maxMs)
+        return this.wait(delta)
     }
 
     getFormattedDate(ms = Date.now()): string {
@@ -43,7 +51,17 @@ export default class Util {
     }
 
     chunkArray<T>(arr: T[], numChunks: number): T[][] {
-        const chunkSize = Math.ceil(arr.length / numChunks)
+        // Validate input to prevent division by zero or invalid chunks
+        if (numChunks <= 0) {
+            throw new Error(`Invalid numChunks: ${numChunks}. Must be a positive integer.`)
+        }
+        
+        if (arr.length === 0) {
+            return []
+        }
+        
+        const safeNumChunks = Math.max(1, Math.floor(numChunks))
+        const chunkSize = Math.ceil(arr.length / safeNumChunks)
         const chunks: T[][] = []
 
         for (let i = 0; i < arr.length; i += chunkSize) {

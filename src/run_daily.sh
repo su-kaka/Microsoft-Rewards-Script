@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+export PATH="/usr/local/bin:/usr/bin:/bin"
+export PLAYWRIGHT_BROWSERS_PATH=0
 export TZ="${TZ:-UTC}"
 
 cd /usr/src/microsoft-rewards-script
@@ -12,27 +13,27 @@ LOCKFILE=/tmp/run_daily.lock
 #  Function: Check and fix lockfile integrity
 # -------------------------------
 self_heal_lockfile() {
-    # If lockfile exists but is empty ¡ú remove it
+    # If lockfile exists but is empty â†’ remove it
     if [ -f "$LOCKFILE" ]; then
         local lock_content
         lock_content=$(<"$LOCKFILE" || echo "")
 
         if [[ -z "$lock_content" ]]; then
-            echo "[$(date)] [run_daily.sh] Found empty lockfile ¡ú removing."
+            echo "[$(date)] [run_daily.sh] Found empty lockfile â†’ removing."
             rm -f "$LOCKFILE"
             return
         fi
 
-        # If lockfile contains non-numeric PID ¡ú remove it
+        # If lockfile contains non-numeric PID â†’ remove it
         if ! [[ "$lock_content" =~ ^[0-9]+$ ]]; then
-            echo "[$(date)] [run_daily.sh] Found corrupted lockfile content ('$lock_content') ¡ú removing."
+            echo "[$(date)] [run_daily.sh] Found corrupted lockfile content ('$lock_content') â†’ removing."
             rm -f "$LOCKFILE"
             return
         fi
 
-        # If lockfile contains PID but process is dead ¡ú remove it
+        # If lockfile contains PID but process is dead â†’ remove it
         if ! kill -0 "$lock_content" 2>/dev/null; then
-            echo "[$(date)] [run_daily.sh] Lockfile PID $lock_content is dead ¡ú removing stale lock."
+            echo "[$(date)] [run_daily.sh] Lockfile PID $lock_content is dead â†’ removing stale lock."
             rm -f "$LOCKFILE"
             return
         fi
@@ -62,21 +63,21 @@ acquire_lock() {
 
             echo "[$(date)] [run_daily.sh] Lock file exists with PID: '$existing_pid'"
 
-            # If lockfile content is invalid ¡ú delete and retry
+            # If lockfile content is invalid â†’ delete and retry
             if [[ -z "$existing_pid" || ! "$existing_pid" =~ ^[0-9]+$ ]]; then
-                echo "[$(date)] [run_daily.sh] Removing invalid lockfile ¡ú retrying..."
+                echo "[$(date)] [run_daily.sh] Removing invalid lockfile â†’ retrying..."
                 rm -f "$LOCKFILE"
                 continue
             fi
 
-            # If process is dead ¡ú delete and retry
+            # If process is dead â†’ delete and retry
             if ! kill -0 "$existing_pid" 2>/dev/null; then
                 echo "[$(date)] [run_daily.sh] Removing stale lock (dead PID: $existing_pid)"
                 rm -f "$LOCKFILE"
                 continue
             fi
 
-            # Check process runtime ¡ú kill if exceeded timeout
+            # Check process runtime â†’ kill if exceeded timeout
             local process_age
             if process_age=$(ps -o etimes= -p "$existing_pid" 2>/dev/null | tr -d ' '); then
                 if [ "$process_age" -gt "$timeout_seconds" ]; then
@@ -113,7 +114,7 @@ release_lock() {
     fi
 }
 
-# Always release lock on exit ¡ª but only if we acquired it
+# Always release lock on exit â€” but only if we acquired it
 trap 'release_lock' EXIT INT TERM
 
 # -------------------------------

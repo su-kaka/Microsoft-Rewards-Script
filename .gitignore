@@ -9,3 +9,16 @@ accounts.main.json
 .DS_Store
 src/browser/sessions/
 *.log
+.vscode/
+.github/
+diagnostic/
+report/
+accounts.json
+accounts.jsonc
+notes
+accounts.dev.json
+accounts.dev.jsonc
+accounts.main.json
+accounts.main.jsonc
+.DS_Store
+.playwright-chromium-installed

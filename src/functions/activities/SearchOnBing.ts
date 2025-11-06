@@ -1,8 +1,9 @@
-import { Page } from 'rebrowser-playwright'
+import type { Page } from 'playwright'
 import * as fs from 'fs'
 import path from 'path'
 
 import { Workers } from '../Workers'
+import { DELAYS } from '../../constants'
 
 import { MorePromotion, PromotionalItem } from '../../interface/DashboardData'
 
@@ -20,12 +21,21 @@ export class SearchOnBing extends Workers {
             const query = await this.getSearchQuery(activity.title)
 
             const searchBar = '#sb_form_q'
-            await page.waitForSelector(searchBar, { state: 'visible', timeout: 10000 })
-            await this.safeClick(page, searchBar)
-            await this.bot.utils.waitRandom(500,2000, 'normal')
-            await page.keyboard.type(query)
-            await page.keyboard.press('Enter')
-            await this.bot.utils.waitRandom(3000,5000, 'normal')
+            const box = page.locator(searchBar)
+            await box.waitFor({ state: 'attached', timeout: DELAYS.SEARCH_BAR_TIMEOUT })
+            await this.bot.browser.utils.tryDismissAllMessages(page)
+            await this.bot.utils.wait(DELAYS.SEARCH_ON_BING_FOCUS)
+            try {
+                await box.focus({ timeout: DELAYS.THIS_OR_THAT_START }).catch(() => { /* ignore */ })
+                await box.fill('')
+                await this.bot.utils.wait(DELAYS.SEARCH_ON_BING_FOCUS)
+                await page.keyboard.type(query, { delay: DELAYS.TYPING_DELAY })
+                await page.keyboard.press('Enter')
+            } catch {
+                const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}`
+                await page.goto(url)
+            }
+            await this.bot.utils.wait(DELAYS.SEARCH_ON_BING_COMPLETE)
 
             await page.close()
 
