@@ -64,11 +64,11 @@ export function generateTOTP(
 
   const hash = hmac(hmacAlg, key, counterBuffer)
   if (!hash || hash.length < 20) {
-    // Minimal sanity check; for SHA1 length is 20
+    // 最小健全性检查；对于SHA1长度为20
     throw new Error('Invalid HMAC output for TOTP')
   }
 
-  // Dynamic truncation
+  // 动态截断
   const offset = hash[hash.length - 1]! & 0x0f
   if (offset + 3 >= hash.length) {
     throw new Error('Invalid dynamic truncation offset')

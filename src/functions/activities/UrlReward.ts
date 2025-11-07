@@ -39,7 +39,7 @@ export class UrlReward extends Workers {
             }, randomScrollPosition)
 
         } catch (error) {
-            this.bot.log(this.bot.isMobile, 'SEARCH-RANDOM-SCROLL', '发生错误:' + error, 'error')
+            this.bot.log(this.bot.isMobile, '随机滚动', '发生错误:' + error, 'error')
         }
     }
 

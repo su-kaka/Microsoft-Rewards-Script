@@ -7,7 +7,7 @@ import { RETRY_LIMITS, TIMEOUTS } from '../../constants'
 export class ABC extends Workers {
 
     async doABC(page: Page) {
-        this.bot.log(this.bot.isMobile, 'ABC', '尝试完成投票')
+        this.bot.log(this.bot.isMobile, 'ABC', '尝试完成ABC活动')
 
         try {
             let $ = await this.bot.browser.func.loadInCheerio(page)
@@ -22,11 +22,11 @@ export class ABC extends Workers {
                 await page.waitForSelector(`#${answer}`, { state: 'visible', timeout: 10000 })
 
                 await this.bot.utils.waitRandom(2000,5000, 'normal')
-                await page.click(`#${answer}`) // Click answer
+                await page.click(`#${answer}`) // 点击答案
 
                 await this.bot.utils.waitRandom(4000,7000, 'normal')
                 await page.waitForSelector('div.wk_button', { state: 'visible', timeout: 10000 })
-                await page.click('div.wk_button') // Click next question button
+                await page.click('div.wk_button') // 点击下一题按钮
 
                 page = await this.bot.browser.utils.getLatestTab(page)
                 $ = await this.bot.browser.func.loadInCheerio(page)
@@ -37,7 +37,7 @@ export class ABC extends Workers {
             await page.close()
 
             if (i === RETRY_LIMITS.ABC_MAX) {
-                this.bot.log(this.bot.isMobile, 'ABC', `Failed to solve quiz, exceeded max iterations of ${RETRY_LIMITS.ABC_MAX}`, 'warn')
+                this.bot.log(this.bot.isMobile, 'ABC', `解决测验失败，超过最大迭代次数 ${RETRY_LIMITS.ABC_MAX}`, 'warn')
             } else {
                 this.bot.log(this.bot.isMobile, 'ABC', '成功完成ABC活动')
             }

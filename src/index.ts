@@ -1,6 +1,6 @@
 import cluster from 'cluster'
 import type { Worker } from 'cluster'
-// Use Page type from playwright for typings; at runtime rebrowser-playwright extends playwright
+// 使用 playwright 的 Page 类型进行类型定义；在运行时 rebrowser-playwright 扩展 playwright
 import type { Page } from 'playwright'
 
 import Browser from './browser/Browser'
@@ -43,7 +43,7 @@ export class MicrosoftRewardsBot {
     public compromisedModeActive: boolean = false
     public compromisedReason?: string
     public compromisedEmail?: string
-    // Mutex-like flag to prevent parallel execution when config.parallel is accidentally misconfigured
+    // 类似互斥锁的标志，防止在 config.parallel 被意外错误配置时并行执行
     private isDesktopRunning: boolean = false
     private isMobileRunning: boolean = false
 
@@ -57,7 +57,7 @@ export class MicrosoftRewardsBot {
     private workers: Workers  // 工作线程管理器
     private login = new Login(this)  // 登录处理器
     private accessToken: string = ''  // 访问令牌
-    // Summary collection (per process)
+    // 摘要收集（每个进程）
     private accountSummaries: AccountSummary[] = []
     private runId: string = Math.random().toString(36).slice(2)
     private bannedTriggered: { email: string; reason: string } | null = null
@@ -92,7 +92,7 @@ export class MicrosoftRewardsBot {
 
 
 
-        // Only cluster when there's more than 1 cluster demanded
+        // 只有当需要超过1个集群时才进行集群
         if (this.config.clusters > 1) {
             if (cluster.isPrimary) {
                 this.runMaster()
@@ -104,7 +104,7 @@ export class MicrosoftRewardsBot {
         }
     }
 
-    // Return summaries (used when clusters==1)
+    // 返回摘要（当 clusters==1 时使用）
     public getSummaries() {
         return this.accountSummaries
     }
@@ -114,25 +114,25 @@ export class MicrosoftRewardsBot {
 
         const totalAccounts = this.accounts.length
         
-        // Validate accounts exist
+        // 验证账户是否存在
         if (totalAccounts === 0) {
-            log('main', 'MAIN-PRIMARY', 'No accounts found to process. Exiting.', 'warn')
+            log('main', 'MAIN-PRIMARY', '未找到要处理的账户。退出。', 'warn')
             process.exit(0)
         }
         
-        // If user over-specified clusters (e.g. 10 clusters but only 2 accounts), don't spawn useless idle workers.
+        // 如果用户过度指定了集群（例如10个集群但只有2个账户），不要生成无用的空闲工作线程。
         const workerCount = Math.min(this.config.clusters, totalAccounts)
         const accountChunks = this.utils.chunkArray(this.accounts, workerCount)
-        // Reset activeWorkers to actual spawn count (constructor used raw clusters)
+        // 将 activeWorkers 重置为实际生成计数（构造函数使用原始集群数）
         this.activeWorkers = workerCount
 
         for (let i = 0; i < workerCount; i++) {
             const worker = cluster.fork()
             const chunk = accountChunks[i] || []
             
-            // Validate chunk has accounts
+            // 验证账户块是否包含账户
             if (chunk.length === 0) {
-                log('main', 'MAIN-PRIMARY', `Warning: Worker ${i} received empty account chunk`, 'warn')
+                log('main', 'MAIN-PRIMARY', `警告: Worker ${i} 接收到空的账户块`, 'warn')
             }
             
             (worker as unknown as { send?: (m: { chunk: Account[] }) => void }).send?.({ chunk })
@@ -147,18 +147,18 @@ export class MicrosoftRewardsBot {
     cluster.on('exit', (worker: Worker, code: number) => {
             this.activeWorkers -= 1
 
-            log('main', 'MAIN-WORKER', `Worker ${worker.process.pid} destroyed | Code: ${code} | Active workers: ${this.activeWorkers}`, 'warn')
+            log('main', 'MAIN-WORKER', `Worker ${worker.process.pid} 已销毁 | 代码: ${code} | 活跃工作线程: ${this.activeWorkers}`, 'warn')
 
-            // Optional: restart crashed worker (basic heuristic) if crashRecovery allows
+            // 可选: 如果允许崩溃恢复，则重启已崩溃的工作线程（基本启发式方法）
             try {
                 const cr = this.config.crashRecovery
                 if (cr?.restartFailedWorker && code !== 0) {
                     const attempts = (worker as unknown as { _restartAttempts?: number })._restartAttempts || 0
                     if (attempts < (cr.restartFailedWorkerAttempts ?? 1)) {
                         (worker as unknown as { _restartAttempts?: number })._restartAttempts = attempts + 1
-                        log('main','CRASH-RECOVERY',`Respawning worker (attempt ${attempts + 1})`, 'warn','yellow')
+                        log('main','CRASH-RECOVERY',`重新启动工作线程 (尝试 ${attempts + 1})`, 'warn','yellow')
                         const newW = cluster.fork()
-                        // NOTE: account chunk re-assignment simplistic: unused; real mapping improvement todo
+                        // 注意: 账户块重新分配过于简单: 未使用；真实映射改进待办
                         newW.on('message', (msg: unknown) => {
                             const m = msg as { type?: string; data?: AccountSummary[] }
                             if (m && m.type === 'summary' && Array.isArray(m.data)) this.accountSummaries.push(...m.data)
@@ -167,14 +167,14 @@ export class MicrosoftRewardsBot {
                 }
             } catch { /* ignore */ }
 
-            // Check if all workers have exited
+            // 检查是否所有工作线程已退出
             if (this.activeWorkers === 0) {
-                // All workers done
+                // 所有工作线程完成
                 (async () => {
                     try {
                         await this.sendConclusion(this.accountSummaries)
                     } catch {/* ignore */}
-                    log('main', 'MAIN-WORKER', 'All workers destroyed. Exiting main process!', 'warn')
+                    log('main', 'MAIN-WORKER', '所有工作线程已销毁。退出主进程！', 'warn')
                     process.exit(0)
                 })()
             }
@@ -182,8 +182,8 @@ export class MicrosoftRewardsBot {
     }
 
     private runWorker() {
-        log('main', 'MAIN-WORKER', `Worker ${process.pid} spawned`)
-        // Receive the chunk of accounts from the master
+        log('main', 'MAIN-WORKER', `Worker ${process.pid} 已启动`)
+        // 接收来自主进程的账户块
     ;(process as unknown as { on: (ev: 'message', cb: (m: { chunk: Account[] }) => void) => void }).on('message', async ({ chunk }: { chunk: Account[] }) => {
             await this.runTasks(chunk)
         })
@@ -191,34 +191,34 @@ export class MicrosoftRewardsBot {
 
     private async runTasks(accounts: Account[]) {
         for (const account of accounts) {
-            // If a global standby is active due to security/banned, stop processing further accounts
+            // 如果由于安全/封禁而处于全局待机状态，则停止处理更多账户
             if (this.globalStandby.active) {
-                log('main','SECURITY',`Global standby active (${this.globalStandby.reason || 'security-issue'}). Not proceeding to next accounts until resolved.`, 'warn', 'yellow')
+                log('main','SECURITY',`全局待机激活 (${this.globalStandby.reason || '安全问题'})。在解决之前不会处理下一个账户。`, 'warn', 'yellow')
                 break
             }
-            // Optional global stop after first ban
+            // 可选：第一次封禁后全局停止
             if (this.config?.humanization?.stopOnBan === true && this.bannedTriggered) {
-                log('main','TASK',`Stopping remaining accounts due to ban on ${this.bannedTriggered.email}: ${this.bannedTriggered.reason}`,'warn')
+                log('main','TASK',`由于 ${this.bannedTriggered.email} 上的封禁而停止剩余账户: ${this.bannedTriggered.reason}`,'warn')
                 break
             }
-            // Reset compromised state per account
+            // 重置每个账户的受损状态
             this.compromisedModeActive = false
             this.compromisedReason = undefined
             this.compromisedEmail = undefined
-            // If humanization allowed windows are configured, wait until within a window
+            // 如果配置了人性化允许的时间窗口，在时间窗口内等待
             try {
                 const windows: string[] | undefined = this.config?.humanization?.allowedWindows
                 if (Array.isArray(windows) && windows.length > 0) {
                     const waitMs = this.computeWaitForAllowedWindow(windows)
                     if (waitMs > 0) {
-                        log('main','HUMANIZATION',`Waiting ${Math.ceil(waitMs/1000)}s until next allowed window before starting ${account.email}`,'warn')
+                        log('main','HUMANIZATION',`等待 ${Math.ceil(waitMs/1000)} 秒直到下一个允许的时间窗口再启动 ${account.email}`,'warn')
                         await new Promise<void>(r => setTimeout(r, waitMs))
                     }
                 }
             } catch {/* ignore */}
             this.currentAccountEmail = account.email
             this.currentAccountRecoveryEmail = account.recoveryEmail
-            log('main', 'MAIN-WORKER', `Started tasks for account ${account.email}`)
+            log('main', 'MAIN-WORKER', `已开始为账户 ${account.email} 执行任务`)
 
             const accountStart = Date.now()
             let desktopInitial = 0
@@ -241,10 +241,10 @@ export class MicrosoftRewardsBot {
             if (this.config.parallel) {
                 const mobileInstance = new MicrosoftRewardsBot(true)
                 mobileInstance.axios = this.axios
-                // Run both and capture results with detailed logging
+                // 运行两个流程并捕获结果并进行详细日志记录
                 const desktopPromise = this.Desktop(account).catch(e => {
                     const msg = e instanceof Error ? e.message : String(e)
-                    log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${msg}`,'error')
+                    log(false, 'TASK', `${account.email} 的桌面流程早期失败: ${msg}`,'error')
                     const bd = detectBanReason(e)
                     if (bd.status) {
                         banned.status = true; banned.reason = bd.reason.substring(0,200)
@@ -254,7 +254,7 @@ export class MicrosoftRewardsBot {
                 })
                 const mobilePromise = mobileInstance.Mobile(account).catch(e => {
                     const msg = e instanceof Error ? e.message : String(e)
-                    log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${msg}`,'error')
+                    log(true, 'TASK', `${account.email} 的移动流程早期失败: ${msg}`,'error')
                     const bd = detectBanReason(e)
                     if (bd.status) {
                         banned.status = true; banned.reason = bd.reason.substring(0,200)
@@ -264,34 +264,34 @@ export class MicrosoftRewardsBot {
                 })
                 const [desktopResult, mobileResult] = await Promise.allSettled([desktopPromise, mobilePromise])
                 
-                // Handle desktop result
+                // 处理桌面结果
                 if (desktopResult.status === 'fulfilled' && desktopResult.value) {
                     desktopInitial = desktopResult.value.initialPoints
                     desktopCollected = desktopResult.value.collectedPoints
                 } else if (desktopResult.status === 'rejected') {
-                    log(false, 'TASK', `Desktop promise rejected unexpectedly: ${shortErr(desktopResult.reason)}`,'error')
+                    log(false, 'TASK', `桌面 Promise 意外被拒绝: ${shortErr(desktopResult.reason)}`,'error')
                     errors.push(formatFullErr('desktop-rejected', desktopResult.reason))
                 }
                 
-                // Handle mobile result
+                // 处理移动结果
                 if (mobileResult.status === 'fulfilled' && mobileResult.value) {
                     mobileInitial = mobileResult.value.initialPoints
                     mobileCollected = mobileResult.value.collectedPoints
                 } else if (mobileResult.status === 'rejected') {
-                    log(true, 'TASK', `Mobile promise rejected unexpectedly: ${shortErr(mobileResult.reason)}`,'error')
+                    log(true, 'TASK', `移动 Promise 意外被拒绝: ${shortErr(mobileResult.reason)}`,'error')
                     errors.push(formatFullErr('mobile-rejected', mobileResult.reason))
                 }
             } else {
-                // Sequential execution with safety checks
+                // 顺序执行并进行安全检查
                 if (this.isDesktopRunning || this.isMobileRunning) {
-                    log('main', 'TASK', `Race condition detected: Desktop=${this.isDesktopRunning}, Mobile=${this.isMobileRunning}. Skipping to prevent conflicts.`, 'error')
+                    log('main', 'TASK', `检测到竞态条件: 桌面=${this.isDesktopRunning}, 移动=${this.isMobileRunning}。跳过以防止冲突。`, 'error')
                     errors.push('race-condition-detected')
                 } else {
                     this.isMobile = false
                     this.isDesktopRunning = true
                     const desktopResult = await this.Desktop(account).catch(e => {
                         const msg = e instanceof Error ? e.message : String(e)
-                        log(false, 'TASK', `Desktop flow failed early for ${account.email}: ${msg}`,'error')
+                        log(false, 'TASK', `${account.email} 的桌面流程早期失败: ${msg}`,'error')
                         const bd = detectBanReason(e)
                         if (bd.status) {
                             banned.status = true; banned.reason = bd.reason.substring(0,200)
@@ -305,13 +305,13 @@ export class MicrosoftRewardsBot {
                     }
                     this.isDesktopRunning = false
 
-                    // If banned or compromised detected, skip mobile to save time
+                    // 如果检测到封禁或受损，则跳过移动以节省时间
                     if (!banned.status && !this.compromisedModeActive) {
                         this.isMobile = true
                         this.isMobileRunning = true
                         const mobileResult = await this.Mobile(account).catch(e => {
                             const msg = e instanceof Error ? e.message : String(e)
-                            log(true, 'TASK', `Mobile flow failed early for ${account.email}: ${msg}`,'error')
+                            log(true, 'TASK', `${account.email} 的移动流程早期失败: ${msg}`,'error')
                             const bd = detectBanReason(e)
                             if (bd.status) {
                                 banned.status = true; banned.reason = bd.reason.substring(0,200)
@@ -325,8 +325,8 @@ export class MicrosoftRewardsBot {
                         }
                         this.isMobileRunning = false
                     } else {
-                        const why = banned.status ? 'banned status' : 'compromised status'
-                        log(true, 'TASK', `Skipping mobile flow for ${account.email} due to ${why}`, 'warn')
+                        const why = banned.status ? '封禁状态' : '受损状态'
+                        log(true, 'TASK', `由于 ${why} 跳过为 ${account.email} 执行移动流程`, 'warn')
                     }
                 }
             }
@@ -334,17 +334,17 @@ export class MicrosoftRewardsBot {
             const accountEnd = Date.now()
             const durationMs = accountEnd - accountStart
             const totalCollected = desktopCollected + mobileCollected
-            // Correct initial points (previous version double counted desktop+mobile baselines)
-            // Strategy: pick the lowest non-zero baseline (desktopInitial or mobileInitial) as true start.
-            // Sequential flow: desktopInitial < mobileInitial after gain -> min = original baseline.
-            // Parallel flow: both baselines equal -> min is fine.
+            // 修正初始积分（以前版本重复计算了桌面+移动基线）
+            // 策略：选择最低的非零基线（desktopInitial 或 mobileInitial）作为真实起点。
+            // 顺序流：获得积分后 desktopInitial < mobileInitial -> min = 原始基线。
+            // 并行流：两个基线相等 -> min 是合适的。
             const baselines: number[] = []
             if (desktopInitial) baselines.push(desktopInitial)
             if (mobileInitial) baselines.push(mobileInitial)
             let initialTotal = 0
             if (baselines.length === 1) initialTotal = baselines[0]!
             else if (baselines.length === 2) initialTotal = Math.min(baselines[0]!, baselines[1]!)
-            // Fallback if both missing
+            // 如果两者都缺失则回退
             if (initialTotal === 0 && (desktopInitial || mobileInitial)) initialTotal = desktopInitial || mobileInitial || 0
             const endTotal = initialTotal + totalCollected
             this.accountSummaries.push({
@@ -361,40 +361,40 @@ export class MicrosoftRewardsBot {
 
             if (banned.status) {
                 this.bannedTriggered = { email: account.email, reason: banned.reason }
-                // Enter global standby: do not proceed to next accounts
-                this.globalStandby = { active: true, reason: `banned:${banned.reason}` }
-                await this.sendGlobalSecurityStandbyAlert(account.email, `Ban detected: ${banned.reason || 'unknown'}`)
+                // 进入全局待机：不处理下一个账户
+                this.globalStandby = { active: true, reason: `封禁:${banned.reason}` }
+                await this.sendGlobalSecurityStandbyAlert(account.email, `检测到封禁: ${banned.reason || '未知'}`)
             }
 
             await log('main', 'MAIN-WORKER', `账户 ${account.email} 的任务已完成`, 'log', 'green')
         }
 
     await log(this.isMobile, 'MAIN-PRIMARY', '所有账户的任务已完成', 'log', 'green')
-        // Extra diagnostic summary when verbose
+        // 详细模式下的额外诊断摘要
         if (process.env.DEBUG_REWARDS_VERBOSE === '1') {
             for (const summary of this.accountSummaries) {
-                log('main','SUMMARY-DEBUG',`Account ${summary.email} collected D:${summary.desktopCollected} M:${summary.mobileCollected} TOTAL:${summary.totalCollected} ERRORS:${summary.errors.length ? summary.errors.join(';') : 'none'}`)
+                log('main','SUMMARY-DEBUG',`账户 ${summary.email} 收集 D:${summary.desktopCollected} M:${summary.mobileCollected} 总计:${summary.totalCollected} 错误:${summary.errors.length ? summary.errors.join(';') : '无'}`)
             }
         }
-        // If any account is flagged compromised, do NOT exit; keep the process alive so the browser stays open
+        // 如果任何账户被标记为受损，不要退出；保持进程运行以使浏览器保持开启
         if (this.compromisedModeActive || this.globalStandby.active) {
-            log('main','SECURITY','Compromised or banned detected. Global standby engaged: we will NOT proceed to other accounts until resolved. Keeping process alive. Press CTRL+C to exit when done. Security check by @Light','warn','yellow')
+            log('main','SECURITY','检测到受损或封禁。启用全局待机：在解决之前不会处理其他账户。保持进程运行。完成后按 CTRL+C 退出。安全检查由 @Light 提供','warn','yellow')
             const standbyInterval = setInterval(() => {
-                log('main','SECURITY','Still in standby: session(s) held open for manual recovery / review...','warn','yellow')
+                log('main','SECURITY','仍在待机：会话保持开启以供手动恢复/审查...','warn','yellow')
             }, 5 * 60 * 1000)
             
-            // Cleanup on process exit
+            // 进程退出时清理
             process.once('SIGINT', () => { clearInterval(standbyInterval); process.exit(0) })
             process.once('SIGTERM', () => { clearInterval(standbyInterval); process.exit(0) })
             return
         }
-        // If in worker mode (clusters>1) send summaries to primary
+        // 如果在工作线程模式下（clusters>1）将摘要发送给主进程
         if (this.config.clusters > 1 && !cluster.isPrimary) {
             if (process.send) {
                 process.send({ type: 'summary', data: this.accountSummaries })
             }
         } else {
-            // Single process mode
+            // 单进程模式
         }
         process.exit()
     }
@@ -413,7 +413,7 @@ export class MicrosoftRewardsBot {
                 DISCORD.COLOR_RED
             )
         } catch (e) {
-            log('main','ALERT',`Failed to send ban alert: ${e instanceof Error ? e.message : e}`,'warn')
+            log('main','ALERT',`发送封禁警报失败: ${e instanceof Error ? e.message : e}`,'warn')
         }
     }
 
@@ -434,13 +434,13 @@ export class MicrosoftRewardsBot {
             const s = sh*60 + sm
             const e = eh*60 + em
             if (s <= e) {
-                // same-day window
+                // 当天时间窗口
                 if (minsNow >= s && minsNow <= e) return 0
                 if (minsNow < s) nextStartMins = Math.min(nextStartMins ?? s, s)
             } else {
-                // wraps past midnight (e.g., 22:00-02:00)
+                // 跨越午夜（例如，22:00-02:00）
                 if (minsNow >= s || minsNow <= e) return 0
-                // next start today is s
+                // 今天下一次开始是 s
                 nextStartMins = Math.min(nextStartMins ?? s, s)
             }
         }
@@ -449,40 +449,40 @@ export class MicrosoftRewardsBot {
             const targetTodayMs = (nextStartMins - minsNow) * msPerMin
             return targetTodayMs > 0 ? targetTodayMs : (24*60 + nextStartMins - minsNow) * msPerMin
         }
-        // No valid windows parsed -> do not block
+        // 未解析到有效时间窗口 -> 不要阻止
         return 0
     }
 
-    // Desktop
+    // 桌面
     async Desktop(account: Account) {
-        log(false,'FLOW','Desktop() invoked')
+        log(false,'FLOW','Desktop() 已调用')
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
         this.homePage = await browser.newPage()
 
-        log(this.isMobile, 'MAIN', 'Starting browser')
+        log(this.isMobile, 'MAIN', '启动浏览器')
 
-        // Login into MS Rewards, then optionally stop if compromised
+        // 登录 MS Rewards，然后可选择在受损时停止
     await this.login.login(this.homePage, account.email, account.password, account.totp)
 
         if (this.compromisedModeActive) {
-            // User wants the page to remain open for manual recovery. Do not proceed to tasks.
+            // 用户希望页面保持开启以进行手动恢复。不要继续执行任务。
             const reason = this.compromisedReason || 'security-issue'
-            log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving the browser open and skipping all activities for ${account.email}. Security check by @Light`, 'warn', 'yellow')
+            log(this.isMobile, 'SECURITY', `账户被标记为受损 (${reason}). 保持浏览器开启并跳过所有为 ${account.email} 的活动。安全检查由 @Light 提供`, 'warn', 'yellow')
             try {
                 const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
                 await ConclusionWebhook(
                     this.config,
-                    '🔐 Security Alert (Post-Login)',
-                    `**Account:** ${account.email}\n**Reason:** ${reason}\n**Action:** Leaving browser open; skipping tasks\n\n_Security check by @Light_`,
+                    '🔐 安全警报 (登录后)',
+                    `**账户:** ${account.email}\n**原因:** ${reason}\n**操作:** 保持浏览器开启；跳过任务\n\n_安全检查由 @Light 提供_`,
                     undefined,
                     0xFFAA00
                 )
             } catch {/* ignore */}
-            // Save session for convenience, but do not close the browser
+            // 为方便起见保存会话，但不要关闭浏览器
             try { 
                 await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) 
             } catch (e) {
-                log(this.isMobile, 'SECURITY', `Failed to save session: ${e instanceof Error ? e.message : String(e)}`, 'warn')
+                log(this.isMobile, 'SECURITY', `保存会话失败: ${e instanceof Error ? e.message : String(e)}`, 'warn')
             }
             return { initialPoints: 0, collectedPoints: 0 }
         }
@@ -494,64 +494,64 @@ export class MicrosoftRewardsBot {
     this.pointsInitial = data.userStatus.availablePoints
     const initial = this.pointsInitial
 
-        log(this.isMobile, 'MAIN-POINTS', `Current point count: ${this.pointsInitial}`)
+        log(this.isMobile, 'MAIN-POINTS', `当前积分为: ${this.pointsInitial}`)
 
         const browserEnarablePoints = await this.browser.func.getBrowserEarnablePoints()
 
-        // Tally all the desktop points
+        // 统计所有桌面积分
         this.pointsCanCollect = browserEnarablePoints.dailySetPoints +
             browserEnarablePoints.desktopSearchPoints
             + browserEnarablePoints.morePromotionsPoints
 
-        log(this.isMobile, 'MAIN-POINTS', `You can earn ${this.pointsCanCollect} points today`)
+        log(this.isMobile, 'MAIN-POINTS', `您今天可以获得 ${this.pointsCanCollect} 积分`)
 
         if (this.pointsCanCollect === 0) {
-            // Extra diagnostic breakdown so users know WHY it's zero
-            log(this.isMobile, 'MAIN-POINTS', `Breakdown (desktop): dailySet=${browserEnarablePoints.dailySetPoints} search=${browserEnarablePoints.desktopSearchPoints} promotions=${browserEnarablePoints.morePromotionsPoints}`)
-            log(this.isMobile, 'MAIN-POINTS', 'All desktop earnable buckets are zero. This usually means: tasks already completed today OR the daily reset has not happened yet for your time zone. If you still want to force run activities set execution.runOnZeroPoints=true in config.', 'log', 'yellow')
+            // 额外的诊断细分，让用户知道为什么是零
+            log(this.isMobile, 'MAIN-POINTS', `细分 (桌面): 每日任务=${browserEnarablePoints.dailySetPoints} 搜索=${browserEnarablePoints.desktopSearchPoints} 推广=${browserEnarablePoints.morePromotionsPoints}`)
+            log(this.isMobile, 'MAIN-POINTS', '所有可赚取的桌面积分桶都为零。这通常意味着：今天任务已完成或者您的时区尚未发生每日重置。如果您仍想强制运行活动，请在配置中设置 execution.runOnZeroPoints=true。', 'log', 'yellow')
         }
 
-        // If runOnZeroPoints is false and 0 points to earn, don't continue
+        // 如果 runOnZeroPoints 为 false 且可赚取积分为0，则不要继续
         if (!this.config.runOnZeroPoints && this.pointsCanCollect === 0) {
-            log(this.isMobile, 'MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping!', 'log', 'yellow')
+            log(this.isMobile, 'MAIN', '没有可赚取的积分，且"runOnZeroPoints"设置为"false"，停止！', 'log', 'yellow')
 
-            // Close desktop browser
+            // 关闭桌面浏览器
             await this.browser.func.closeBrowser(browser, account.email)
             return
         }
 
-        // Open a new tab to where the tasks are going to be completed
+        // 打开一个新选项卡以完成任务
         const workerPage = await browser.newPage()
 
-        // Go to homepage on worker page
+        // 在工作页面上转到首页
         await this.browser.func.goHome(workerPage)
 
-        // Complete daily set
+        // 完成每日任务
         if (this.config.workers.doDailySet) {
             await this.workers.doDailySet(workerPage, data)
         }
 
-        // Complete more promotions
+        // 完成更多推广
         if (this.config.workers.doMorePromotions) {
             await this.workers.doMorePromotions(workerPage, data)
         }
 
-        // Complete punch cards
+        // 完成打卡卡
         if (this.config.workers.doPunchCards) {
             await this.workers.doPunchCard(workerPage, data)
         }
 
-        // Do desktop searches
+        // 执行桌面搜索
         if (this.config.workers.doDesktopSearch) {
             await this.activities.doSearch(workerPage, data)
         }
 
-        // Save cookies
+        // 保存 Cookie
         await saveSessionData(this.config.sessionPath, browser, account.email, this.isMobile)
 
-        // Fetch points BEFORE closing (avoid page closed reload error)
+        // 关闭前获取积分（避免页面关闭重新加载错误）
         const after = await this.browser.func.getCurrentPoints().catch(()=>initial)
-        // Close desktop browser
+        // 关闭桌面浏览器
         await this.browser.func.closeBrowser(browser, account.email)
         return {
             initialPoints: initial,
@@ -559,25 +559,25 @@ export class MicrosoftRewardsBot {
         }
     }
 
-    // Mobile
+    // 移动
     async Mobile(account: Account) {
-        log(true,'FLOW','Mobile() invoked')
+        log(true,'FLOW','Mobile() 已调用')
         const browser = await this.browserFactory.createBrowser(account.proxy, account.email)
         this.homePage = await browser.newPage()
 
-        log(this.isMobile, 'MAIN', 'Starting browser')
+        log(this.isMobile, 'MAIN', '启动浏览器')
 
-        // Login into MS Rewards, then respect compromised mode
+        // 登录 MS Rewards，然后遵守受损模式
     await this.login.login(this.homePage, account.email, account.password, account.totp)
         if (this.compromisedModeActive) {
             const reason = this.compromisedReason || 'security-issue'
-            log(this.isMobile, 'SECURITY', `Account flagged as compromised (${reason}). Leaving mobile browser open and skipping mobile activities for ${account.email}. Security check by @Light`, 'warn', 'yellow')
+            log(this.isMobile, 'SECURITY', `账户被标记为受损 (${reason}). 保持移动浏览器开启并跳过移动活动 ${account.email}. 安全检查由 @Light 提供`, 'warn', 'yellow')
             try {
                 const { ConclusionWebhook } = await import('./util/ConclusionWebhook')
                 await ConclusionWebhook(
                     this.config,
-                    '🔐 Security Alert (Mobile)',
-                    `**Account:** ${account.email}\n**Reason:** ${reason}\n**Action:** Leaving mobile browser open; skipping tasks\n\n_Security check by @Light_`,
+                    '🔐 安全警报 (移动)',
+                    `**账户:** ${account.email}\n**原因:** ${reason}\n**操作:** 保持移动浏览器开启；跳过任务\n\n_安全检查由 @Light 提供_`,
                     undefined,
                     0xFFAA00
                 )
@@ -585,7 +585,7 @@ export class MicrosoftRewardsBot {
             try { 
                 await saveSessionData(this.config.sessionPath, this.homePage.context(), account.email, this.isMobile) 
             } catch (e) {
-                log(this.isMobile, 'SECURITY', `Failed to save session: ${e instanceof Error ? e.message : String(e)}`, 'warn')
+                log(this.isMobile, 'SECURITY', `保存会话失败: ${e instanceof Error ? e.message : String(e)}`, 'warn')
             }
             return { initialPoints: 0, collectedPoints: 0 }
         }
@@ -601,77 +601,77 @@ export class MicrosoftRewardsBot {
 
         this.pointsCanCollect = browserEnarablePoints.mobileSearchPoints + appEarnablePoints.totalEarnablePoints
 
-        log(this.isMobile, 'MAIN-POINTS', `You can earn ${this.pointsCanCollect} points today (Browser: ${browserEnarablePoints.mobileSearchPoints} points, App: ${appEarnablePoints.totalEarnablePoints} points)`)
+        log(this.isMobile, 'MAIN-POINTS', `您今天可以获得 ${this.pointsCanCollect} 积分 (浏览器: ${browserEnarablePoints.mobileSearchPoints} 积分, 应用: ${appEarnablePoints.totalEarnablePoints} 积分)`)
 
         if (this.pointsCanCollect === 0) {
-            log(this.isMobile, 'MAIN-POINTS', `Breakdown (mobile): browserSearch=${browserEnarablePoints.mobileSearchPoints} appTotal=${appEarnablePoints.totalEarnablePoints}`)
-            log(this.isMobile, 'MAIN-POINTS', 'All mobile earnable buckets are zero. Causes: mobile searches already maxed, daily set finished, or daily rollover not reached yet. You can force execution by setting execution.runOnZeroPoints=true.', 'log', 'yellow')
+            log(this.isMobile, 'MAIN-POINTS', `细分 (移动): 浏览器搜索=${browserEnarablePoints.mobileSearchPoints} 应用总计=${appEarnablePoints.totalEarnablePoints}`)
+            log(this.isMobile, 'MAIN-POINTS', '所有可赚取的移动积分桶都为零。原因：移动搜索已达到上限，每日任务已完成，或尚未达到每日重置时间。您可以通过设置 execution.runOnZeroPoints=true 来强制执行。', 'log', 'yellow')
         }
 
-        // If runOnZeroPoints is false and 0 points to earn, don't continue
+        // 如果 runOnZeroPoints 为 false 且可赚取积分为0，则不要继续
         if (!this.config.runOnZeroPoints && this.pointsCanCollect === 0) {
-            log(this.isMobile, 'MAIN', 'No points to earn and "runOnZeroPoints" is set to "false", stopping!', 'log', 'yellow')
+            log(this.isMobile, 'MAIN', '没有可赚取的积分，且"runOnZeroPoints"设置为"false"，停止！', 'log', 'yellow')
 
-            // Close mobile browser
+            // 关闭移动浏览器
             await this.browser.func.closeBrowser(browser, account.email)
             return {
                 initialPoints: initialPoints,
                 collectedPoints: 0
             }
         }
-        // Do daily check in
+        // 执行每日签到
         if (this.config.workers.doDailyCheckIn) {
             await this.activities.doDailyCheckIn(this.accessToken, data)
         }
 
-        // Do read to earn
+        // 执行阅读赚钱
         if (this.config.workers.doReadToEarn) {
             await this.activities.doReadToEarn(this.accessToken, data)
         }
 
-        // Do mobile searches
+        // 执行移动搜索
         if (this.config.workers.doMobileSearch) {
-            // If no mobile searches data found, stop (Does not always exist on new accounts)
+            // 如果未找到移动搜索数据，则停止（新账户中不一定存在）
             if (data.userStatus.counters.mobileSearch) {
-                // Open a new tab to where the tasks are going to be completed
+                // 打开一个新选项卡以完成任务
                 const workerPage = await browser.newPage()
 
-                // Go to homepage on worker page
+                // 在工作页面上转到首页
                 await this.browser.func.goHome(workerPage)
 
                 await this.activities.doSearch(workerPage, data)
 
-                // Fetch current search points
+                // 获取当前搜索积分
                 const mobileSearchPoints = (await this.browser.func.getSearchPoints()).mobileSearch?.[0]
 
                 if (mobileSearchPoints && (mobileSearchPoints.pointProgressMax - mobileSearchPoints.pointProgress) > 0) {
-                    // Increment retry count
+                    // 递增重试计数
                     this.mobileRetryAttempts++
                 }
 
-                // Exit if retries are exhausted
+                // 如果重试次数耗尽则退出
                 if (this.mobileRetryAttempts > this.config.searchSettings.retryMobileSearchAmount) {
-                    log(this.isMobile, 'MAIN', `Max retry limit of ${this.config.searchSettings.retryMobileSearchAmount} reached. Exiting retry loop`, 'warn')
+                    log(this.isMobile, 'MAIN', `已达到最大重试限制 ${this.config.searchSettings.retryMobileSearchAmount}。退出重试循环`, 'warn')
                 } else if (this.mobileRetryAttempts !== 0) {
-                    log(this.isMobile, 'MAIN', `Attempt ${this.mobileRetryAttempts}/${this.config.searchSettings.retryMobileSearchAmount}: Unable to complete mobile searches, bad User-Agent? Increase search delay? Retrying...`, 'log', 'yellow')
+                    log(this.isMobile, 'MAIN', `尝试 ${this.mobileRetryAttempts}/${this.config.searchSettings.retryMobileSearchAmount}: 无法完成移动搜索，User-Agent 有问题？增加搜索延迟？正在重试...`, 'log', 'yellow')
 
-                    // Close mobile browser
+                    // 关闭移动浏览器
                     await this.browser.func.closeBrowser(browser, account.email)
 
-                    // Create a new browser and try
+                    // 创建一个新浏览器并尝试
                     await this.Mobile(account)
                     return
                 }
             } else {
-                log(this.isMobile, 'MAIN', 'Unable to fetch search points, your account is most likely too "new" for this! Try again later!', 'warn')
+                log(this.isMobile, 'MAIN', '无法获取搜索积分，您的账户可能对此来说太"新"了！请稍后重试！', 'warn')
             }
         }
 
         const afterPointAmount = await this.browser.func.getCurrentPoints()
 
-        log(this.isMobile, 'MAIN-POINTS', `The script collected ${afterPointAmount - initialPoints} points today`)
+        log(this.isMobile, 'MAIN-POINTS', `脚本今天收集了 ${afterPointAmount - initialPoints} 积分`)
 
-        // Close mobile browser
+        // 关闭移动浏览器
         await this.browser.func.closeBrowser(browser, account.email)
         return {
             initialPoints: initialPoints,
@@ -698,7 +698,7 @@ export class MicrosoftRewardsBot {
         let accountsBanned = 0
         let successes = 0
 
-        // Calculate summary statistics
+        // 计算摘要统计
         for (const s of summaries) {
             totalCollected += s.totalCollected
             totalInitial += s.initialTotal
@@ -712,7 +712,7 @@ export class MicrosoftRewardsBot {
         const avgDuration = totalDuration / totalAccounts
         const avgPointsPerAccount = Math.round(totalCollected / totalAccounts)
 
-        // Read package version
+        // 读取包版本
         let version = 'unknown'
         try {
             const pkgPath = path.join(process.cwd(), 'package.json')
@@ -723,7 +723,7 @@ export class MicrosoftRewardsBot {
             }
         } catch { /* ignore */ }
 
-        // Send enhanced webhook
+        // 发送增强的webhook
         if (conclusionWebhookEnabled || ntfyEnabled || webhookEnabled) {
             await ConclusionWebhookEnhanced(cfg, {
                 version,
@@ -742,7 +742,7 @@ export class MicrosoftRewardsBot {
             })
         }
 
-        // Write local JSON report
+        // 写入本地JSON报告
         try {
             const fs = await import('fs')
             const path = await import('path')
@@ -758,15 +758,15 @@ export class MicrosoftRewardsBot {
                 perAccount: summaries
             }
             fs.writeFileSync(file, JSON.stringify(payload, null, 2), 'utf-8')
-            log('main','REPORT',`Saved report to ${file}`)
+            log('main','REPORT',`报告已保存到 ${file}`)
         } catch (e) {
-            log('main','REPORT',`Failed to save report: ${e instanceof Error ? e.message : e}`,'warn')
+            log('main','REPORT',`保存报告失败: ${e instanceof Error ? e.message : e}`,'warn')
         }
 
 
-        // Optional community notice (shown randomly in ~15% of successful runs)
+        // 可选社区通知（在约15%的成功运行中随机显示）
         if (Math.random() > 0.85 && successes > 0 && accountsWithErrors === 0) {
-            log('main','INFO','Want faster updates & enhanced anti-detection? Community builds available: https://discord.gg/kn3695Kx32')
+            log('main','INFO','想要更快的更新和增强的反检测？社区版本可用: https://discord.gg/kn3695Kx32')
         }
 
     }
@@ -795,7 +795,7 @@ export class MicrosoftRewardsBot {
                 DISCORD.COLOR_RED
             )
         } catch (e) {
-            log('main','ALERT',`Failed to send standby alert: ${e instanceof Error ? e.message : e}`,'warn')
+            log('main','ALERT',`发送待机警报失败: ${e instanceof Error ? e.message : e}`,'warn')
         }
     }
 }
@@ -827,11 +827,11 @@ async function main() {
 
     const attachHandlers = () => {
         process.on('unhandledRejection', (reason) => {
-            log('main','FATAL','UnhandledRejection: ' + (reason instanceof Error ? reason.message : String(reason)), 'error')
+            log('main','FATAL','未处理的拒绝: ' + (reason instanceof Error ? reason.message : String(reason)), 'error')
             gracefulExit(1)
         })
         process.on('uncaughtException', (err) => {
-            log('main','FATAL','UncaughtException: ' + err.message, 'error')
+            log('main','FATAL','未捕获的异常: ' + err.message, 'error')
             gracefulExit(1)
         })
         process.on('SIGTERM', () => gracefulExit(0))
@@ -843,7 +843,7 @@ async function main() {
             const max = config.crashRecovery.maxRestarts ?? 2
             if (crashState.restarts < max) {
                 const backoff = (config.crashRecovery.backoffBaseMs ?? 2000) * (crashState.restarts + 1)
-                log('main','CRASH-RECOVERY',`Scheduling restart in ${backoff}ms (attempt ${crashState.restarts + 1}/${max})`, 'warn','yellow')
+                log('main','CRASH-RECOVERY',`计划在 ${backoff}ms 后重启 (尝试 ${crashState.restarts + 1}/${max})`, 'warn','yellow')
                 setTimeout(() => {
                     crashState.restarts++
                     bootstrap()
@@ -859,7 +859,7 @@ async function main() {
             await rewardsBot.initialize()
             await rewardsBot.run()
         } catch (e) {
-            log('main','MAIN-ERROR','Fatal during run: ' + (e instanceof Error ? e.message : e),'error')
+            log('main','MAIN-ERROR','运行期间致命错误: ' + (e instanceof Error ? e.message : e),'error')
             gracefulExit(1)
         }
     }
@@ -868,10 +868,10 @@ async function main() {
     await bootstrap()
 }
 
-// Start the bots
+// 启动机器人
 if (require.main === module) {
     main().catch(error => {
-        log('main', 'MAIN-ERROR', `Error running bots: ${error}`, 'error')
+        log('main', 'MAIN-ERROR', `运行机器人时出错: ${error}`, 'error')
         process.exit(1)
     })
 }

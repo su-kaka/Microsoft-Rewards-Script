@@ -25,22 +25,22 @@ export class ConfigValidator {
   static validateConfig(config: Config): ValidationResult {
     const issues: ValidationIssue[] = []
 
-    // Check baseURL
+    // 检查baseURL
     if (!config.baseURL || !config.baseURL.startsWith('https://')) {
       issues.push({
         severity: 'error',
         field: 'baseURL',
-        message: 'baseURL must be a valid HTTPS URL',
-        suggestion: 'Use https://rewards.bing.com'
+        message: 'baseURL 必须是有效的HTTPS URL',
+        suggestion: '使用 https://rewards.bing.com'
       })
     }
 
-    // Check sessionPath
+    // 检查sessionPath
     if (!config.sessionPath || config.sessionPath.trim() === '') {
       issues.push({
         severity: 'error',
         field: 'sessionPath',
-        message: 'sessionPath cannot be empty'
+        message: 'sessionPath 不能为空'
       })
     }
 

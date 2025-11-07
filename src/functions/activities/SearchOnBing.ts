@@ -42,7 +42,7 @@ export class SearchOnBing extends Workers {
             this.bot.log(this.bot.isMobile, '必应搜索', '成功完成必应搜索')
         } catch (error) {
             await page.close()
-            this.bot.log(this.bot.isMobile, 'SEARCH-ON-BING', 'An error occurred:' + error, 'error')
+            this.bot.log(this.bot.isMobile, '必应搜索', '发生错误:' + error, 'error')
         }
     }
 

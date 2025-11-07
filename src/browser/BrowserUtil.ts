@@ -102,14 +102,14 @@ export default class BrowserUtil {
             const rejectBtn = overlay.locator(reject)
             if (await rejectBtn.first().isVisible().catch(() => false)) {
                 await rejectBtn.first().click({ timeout: 500 }).catch(() => {})
-                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Overlay Reject')
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', '已关闭: 覆盖拒绝')
                 return 1
             }
 
             const acceptBtn = overlay.locator(accept)
             if (await acceptBtn.first().isVisible().catch(() => false)) {
                 await acceptBtn.first().click({ timeout: 500 }).catch(() => {})
-                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Overlay Accept')
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', '已关闭: 覆盖接受')
                 return 1
             }
 
@@ -129,12 +129,12 @@ export default class BrowserUtil {
             const closeBtn = dialog.locator(closeButtons).first()
             if (await closeBtn.isVisible({ timeout: 200 }).catch(() => false)) {
                 await closeBtn.click({ timeout: 500 }).catch(() => {})
-                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Streak Protection Dialog Button')
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', '已关闭: 连续保护对话框按钮')
                 return 1
             }
 
             await page.keyboard.press('Escape').catch(() => {})
-            this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Streak Protection Dialog Escape')
+            this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', '已关闭: 连续保护对话框转义')
             return 1
         } catch {
             return 0
@@ -158,7 +158,7 @@ export default class BrowserUtil {
             const nextBtn = page.locator(nextButton).first()
             if (await nextBtn.isVisible({ timeout: 500 }).catch(() => false)) {
                 await nextBtn.click({ timeout: 1000 }).catch(() => {})
-                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', 'Dismissed: Terms Update Dialog (Next)')
+                this.bot.log(this.bot.isMobile, 'DISMISS-ALL-MESSAGES', '已关闭: 条款更新对话框 (下一步)')
                 // Wait a bit for navigation
                 await page.waitForTimeout(1000)
                 return 1

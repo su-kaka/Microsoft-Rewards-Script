@@ -13,7 +13,7 @@ export class Poll extends Workers {
             const buttonId = `#btoption${Math.floor(this.bot.utils.randomNumber(0, 1))}`
 
             await page.waitForSelector(buttonId, { state: 'visible', timeout: 10000 }).catch((e) => {
-                this.bot.log(this.bot.isMobile, 'POLL', `Could not find poll button: ${e}`, 'warn')
+                this.bot.log(this.bot.isMobile, 'POLL', `找不到投票按钮: ${e}`, 'warn')
             })
             await this.bot.utils.waitRandom(2000,5000)
 

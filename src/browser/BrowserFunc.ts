@@ -42,7 +42,7 @@ export default class BrowserFunc {
                 try {
                     // If activities are found, exit the loop (SUCCESS - account is OK)
                     await page.waitForSelector(SELECTORS.MORE_ACTIVITIES, { timeout: 1000 })
-                    this.bot.log(this.bot.isMobile, 'GO-HOME', 'Visited homepage successfully')
+                    this.bot.log(this.bot.isMobile, 'GO-HOME', '成功访问主页')
                     break
 
                 } catch (error) {
@@ -51,7 +51,7 @@ export default class BrowserFunc {
                     const suspendedByHeader = await page.waitForSelector(SELECTORS.SUSPENDED_ACCOUNT, { state: 'visible', timeout: 500 }).then(() => true).catch(() => false)
                     
                     if (suspendedByHeader) {
-                        this.bot.log(this.bot.isMobile, 'GO-HOME', `Account suspension detected by header selector (iteration ${iteration})`, 'error')
+                        this.bot.log(this.bot.isMobile, 'GO-HOME', `通过标题选择器检测到账户暂停 (迭代 ${iteration})`, 'error')
                         throw new Error('Account has been suspended!')
                     }
                     
@@ -66,16 +66,16 @@ export default class BrowserFunc {
                         
                         const isSuspended = suspensionPatterns.some(pattern => pattern.test(mainContent))
                         if (isSuspended) {
-                            this.bot.log(this.bot.isMobile, 'GO-HOME', `Account suspension detected by content text (iteration ${iteration})`, 'error')
+                            this.bot.log(this.bot.isMobile, 'GO-HOME', `通过内容文本检测到账户暂停 (迭代 ${iteration})`, 'error')
                             throw new Error('Account has been suspended!')
                         }
                     } catch (e) {
-                        // Ignore errors in text check - not critical
-                        this.bot.log(this.bot.isMobile, 'GO-HOME', `Suspension text check skipped: ${e}`, 'warn')
+                        // 忽略文本检查中的错误 - 不关键
+                        this.bot.log(this.bot.isMobile, 'GO-HOME', `跳过暂停文本检查: ${e}`, 'warn')
                     }
                     
-                    // Not suspended, just activities not loaded yet - continue to next iteration
-                    this.bot.log(this.bot.isMobile, 'GO-HOME', `Activities not found yet (iteration ${iteration}/${RETRY_LIMITS.GO_HOME_MAX}), retrying...`, 'warn')
+                    // 未暂停，只是活动尚未加载 - 继续到下一次迭代
+                    this.bot.log(this.bot.isMobile, 'GO-HOME', `活动尚未找到 (迭代 ${iteration}/${RETRY_LIMITS.GO_HOME_MAX})，重试中...`, 'warn')
                 }
 
                 // Below runs if the homepage was unable to be visited
@@ -124,11 +124,11 @@ export default class BrowserFunc {
                 } catch (re) {
                     lastError = re
                     const msg = (re instanceof Error ? re.message : String(re))
-                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Reload failed attempt ${attempt}: ${msg}`, 'warn')
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `重载失败尝试 ${attempt}: ${msg}`, 'warn')
                     // If page/context closed => bail early after first retry
                     if (msg.includes('has been closed')) {
                         if (attempt === 1) {
-                            this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Page appears closed; trying one navigation fallback', 'warn')
+                            this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '页面似乎已关闭；尝试一次导航回退', 'warn')
                             try {
                                 await this.goHome(target)
                             } catch {/* ignore */}
@@ -146,7 +146,7 @@ export default class BrowserFunc {
             
             // Wait for the more-activities element to ensure page is fully loaded
             await target.waitForSelector(SELECTORS.MORE_ACTIVITIES, { timeout: TIMEOUTS.DASHBOARD_WAIT }).catch(() => {
-                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Activities element not found, continuing anyway', 'warn')
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '未找到活动元素，仍然继续', 'warn')
             })
 
             let scriptContent = await target.evaluate(() => {
@@ -159,7 +159,7 @@ export default class BrowserFunc {
             if (!scriptContent) {
                 this.bot.log(this.bot.isMobile, '获取仪表盘数据', '首次脚本中未找到仪表盘数据', 'warn')
                 
-                // Force a navigation retry once before failing hard
+                // 在硬失败之前强制导航重试一次
                 try {
                     await this.goHome(target)
                     await target.waitForLoadState('domcontentloaded', { timeout: TIMEOUTS.VERY_LONG }).catch((e) => {
@@ -177,14 +177,14 @@ export default class BrowserFunc {
                 }).catch(()=>null)
                 
                 if (!retryContent) {
-                    // Log additional debug info
+                    // 记录额外的调试信息
                     const scriptsDebug = await target.evaluate(() => {
                         const scripts = Array.from(document.querySelectorAll('script'))
                         return scripts.map(s => s.innerText.substring(0, 100)).join(' | ')
-                    }).catch(() => 'Unable to get script debug info')
+                    }).catch(() => '无法获取脚本调试信息')
                     
-                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Available scripts preview: ${scriptsDebug}`, 'warn')
-                    throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Dashboard data not found within script', 'error')
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `可用脚本预览: ${scriptsDebug}`, 'warn')
+                    throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '在脚本中未找到仪表盘数据', 'error')
                 }
                 scriptContent = retryContent
             }
@@ -216,10 +216,10 @@ export default class BrowserFunc {
             }, scriptContent)
 
             if (!dashboardData) {
-                // Log a snippet of the script content for debugging
+                // 记录脚本内容片段用于调试
                 const scriptPreview = scriptContent.substring(0, 200)
-                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `Script preview: ${scriptPreview}`, 'warn')
-                throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'Unable to parse dashboard script', 'error')
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `脚本预览: ${scriptPreview}`, 'warn')
+                throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '无法解析仪表盘脚本', 'error')
             }
 
             return dashboardData
@@ -403,17 +403,17 @@ export default class BrowserFunc {
             }
 
             if (scriptContent && foundVariable) {
-                // Escape dots in variable name for regex
+                // 为正则表达式转义变量名中的点
                 const escapedVar = foundVariable.replace(/\./g, '\\.')
                 const regex = new RegExp(`${escapedVar}\\s*=\\s*({.*?});`, 's')
                 const match = regex.exec(scriptContent)
 
                 if (match && match[1]) {
                     const quizData = JSON.parse(match[1])
-                    this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Found quiz data using variable: ${foundVariable}`, 'log')
+                    this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `使用变量找到测验数据: ${foundVariable}`, 'log')
                     return quizData
                 } else {
-                    throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Variable ${foundVariable} found but could not extract JSON data`, 'error')
+                    throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `找到变量 ${foundVariable} 但无法提取JSON数据`, 'error')
                 }
             } else {
                 // Log available scripts for debugging
@@ -423,14 +423,14 @@ export default class BrowserFunc {
                     .filter(t => t.length > 0)
                     .map(t => t.substring(0, 100))
                 
-                this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Script not found. Tried variables: ${possibleVariables.join(', ')}`, 'error')
-                this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `Found ${allScripts.length} scripts on page`, 'warn')
+                this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `未找到脚本。尝试的变量: ${possibleVariables.join(', ')}`, 'error')
+                this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', `在页面上找到 ${allScripts.length} 个脚本`, 'warn')
                 
-                throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'Script containing quiz data not found', 'error')
+                throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', '包含测验数据的脚本未找到', 'error')
             }
 
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', 'An error occurred: ' + error, 'error')
+            throw this.bot.log(this.bot.isMobile, 'GET-QUIZ-DATA', '发生错误: ' + error, 'error')
         }
 
     }

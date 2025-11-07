@@ -16,10 +16,10 @@ type WebhookBuffer = {
 
 const webhookBuffers = new Map<string, WebhookBuffer>()
 
-// Periodic cleanup of old/idle webhook buffers to prevent memory leaks
+// 定期清理旧/空闲的webhook缓冲区以防止内存泄漏
 setInterval(() => {
     const now = Date.now()
-    const BUFFER_MAX_AGE_MS = 3600000 // 1 hour
+    const BUFFER_MAX_AGE_MS = 3600000 // 1小时
     
     for (const [url, buf] of webhookBuffers.entries()) {
         if (!buf.sending && buf.lines.length === 0) {
@@ -29,7 +29,7 @@ setInterval(() => {
             }
         }
     }
-}, 600000) // Check every 10 minutes
+}, 600000) // 每10分钟检查一次
 
 
 /**
@@ -74,7 +74,7 @@ function getBuffer(url: string): WebhookBuffer {
         buf = { lines: [], sending: false }
         webhookBuffers.set(url, buf)
     }
-    // Track last activity for cleanup
+    // 跟踪最后活动以进行清理
     (buf as unknown as { lastActivity: number }).lastActivity = Date.now()
     return buf
 }
@@ -83,7 +83,7 @@ async function sendBatch(url: string, buf: WebhookBuffer) {
     if (buf.sending) return
     buf.sending = true
     
-    // Load config to get webhook settings
+    // 加载配置以获取webhook设置
     const configData = loadConfig()
     const webhookUsername = configData.webhook?.username || DEFAULT_LIVE_LOG_USERNAME
     const webhookAvatarUrl = configData.webhook?.avatarUrl || DISCORD.AVATAR_URL
@@ -105,7 +105,7 @@ async function sendBatch(url: string, buf: WebhookBuffer) {
             continue
         }
 
-        // Enhanced webhook payload with embed, username and avatar
+        // 增强的webhook负载，包含嵌入、用户名和头像
         const payload = {
             username: webhookUsername,
             avatar_url: webhookAvatarUrl,
@@ -120,9 +120,9 @@ async function sendBatch(url: string, buf: WebhookBuffer) {
             await axios.post(url, payload, { headers: { 'Content-Type': 'application/json' }, timeout: DISCORD.WEBHOOK_TIMEOUT })
             await new Promise(resolve => setTimeout(resolve, DISCORD.RATE_LIMIT_DELAY))
         } catch (error) {
-            // Re-queue failed batch at front and exit loop
+            // 将失败的批次重新排队到前面并退出循环
             buf.lines = chunk.concat(buf.lines)
-            console.error('[Webhook] live log delivery failed:', error)
+            console.error('[Webhook] 实时日志传递失败:', error)
             break
         }
     }
@@ -131,28 +131,28 @@ async function sendBatch(url: string, buf: WebhookBuffer) {
 
 function determineColorFromContent(content: string): number {
     const lower = content.toLowerCase()
-    // Security/Ban alerts - Red
+    // 安全/封禁警报 - 红色
     if (lower.includes('[banned]') || lower.includes('[security]') || lower.includes('suspended') || lower.includes('compromised')) {
         return DISCORD.COLOR_RED
     }
-    // Errors - Dark Red
+    // 错误 - 深红色
     if (lower.includes('[error]') || lower.includes('✗')) {
         return DISCORD.COLOR_CRIMSON
     }
-    // Warnings - Orange/Yellow
+    // 警告 - 橙色/黄色
     if (lower.includes('[warn]') || lower.includes('⚠')) {
         return DISCORD.COLOR_ORANGE
     }
-    // Success - Green
+    // 成功 - 绿色
     if (lower.includes('[ok]') || lower.includes('✓') || lower.includes('complet')) {
         return DISCORD.COLOR_GREEN
     }
-    // Info/Main - Blue
+    // 信息/主 - 蓝色
     if (lower.includes('[main]')) {
         return DISCORD.COLOR_BLUE
     }
-    // Default - Gray
-    return 0x95A5A6 // Gray
+    // 默认 - 灰色
+    return 0x95A5A6 // 灰色
 }
 
 function enqueueWebhookLog(url: string, line: string) {
@@ -166,11 +166,11 @@ function enqueueWebhookLog(url: string, line: string) {
     }
 }
 
-// Synchronous logger that returns an Error when type === 'error' so callers can `throw log(...)` safely.
+// 同步记录器，当 type === 'error' 时返回一个 Error，以便调用者可以安全地 `throw log(...)`。
 export function log(isMobile: boolean | 'main', title: string, message: string, type: 'log' | 'warn' | 'error' = 'log', color?: keyof typeof chalk): Error | void {
     const configData = loadConfig()
 
-    // Access logging config with fallback for backward compatibility
+    // 访问日志配置以向后兼容
     const configAny = configData as unknown as Record<string, unknown>
     const logging = configAny.logging as { excludeFunc?: string[]; logExcludeFunc?: string[] } | undefined
     const logExcludeFunc = logging?.excludeFunc ?? (configData as { logExcludeFunc?: string[] }).logExcludeFunc ?? []
@@ -182,7 +182,7 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     const currentTime = new Date().toLocaleString()
     const platformText = isMobile === 'main' ? 'MAIN' : isMobile ? 'MOBILE' : 'DESKTOP'
     
-    // Clean string for notifications (no chalk, structured)
+    // 用于通知的干净字符串（无chalk，结构化）
     type LoggingCfg = { excludeFunc?: string[]; webhookExcludeFunc?: string[]; redactEmails?: boolean }
     const loggingCfg: LoggingCfg = (configAny.logging || {}) as LoggingCfg
     const shouldRedact = !!loggingCfg.redactEmails
@@ -208,24 +208,24 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
         ]
     }
 
-    // Check if the current log type and message meet the NTFY conditions
+    // 检查当前日志类型和消息是否满足NTFY条件
     try {
         if (type in ntfyConditions && ntfyConditions[type as keyof typeof ntfyConditions].some(condition => condition)) {
-            // Fire-and-forget
-            Promise.resolve(Ntfy(cleanStr, type)).catch(() => { /* ignore ntfy errors */ })
+            // 一次性发送
+            Promise.resolve(Ntfy(cleanStr, type)).catch(() => { /* 忽略ntfy错误 */ })
         }
-    } catch { /* ignore */ }
+    } catch { /* 忽略 */ }
 
-    // Console output with better formatting and contextual icons
+    // 控制台输出，格式化更好且带有上下文图标
     const typeIndicator = type === 'error' ? '✗' : type === 'warn' ? '⚠' : '✓'
     const platformColor = isMobile === 'main' ? chalk.cyan : isMobile ? chalk.blue : chalk.magenta
     const typeColor = type === 'error' ? chalk.red : type === 'warn' ? chalk.yellow : chalk.green
     
-    // Add contextual icon based on title/message (ASCII-safe for Windows PowerShell)
+    // 基于标题/消息添加上下文图标（ASCII安全，适用于Windows PowerShell）
     const titleLower = title.toLowerCase()
     const msgLower = message.toLowerCase()
     
-    // ASCII-safe icons for Windows PowerShell compatibility
+    // ASCII安全图标，兼容Windows PowerShell
     const iconMap: Array<[RegExp, string]> = [
         [/security|compromised/i, '[SECURITY]'],
         [/ban|suspend/i, '[BANNED]'],
@@ -261,7 +261,7 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
 
     const applyChalk = color && typeof chalk[color] === 'function' ? chalk[color] as (msg: string) => string : null
 
-    // Log based on the type
+    // 根据类型记录日志
     switch (type) {
         case 'warn':
             applyChalk ? console.warn(applyChalk(formattedStr)) : console.warn(formattedStr)
@@ -276,7 +276,7 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
             break
     }
 
-    // Webhook streaming (live logs)
+    // Webhook流（实时日志）
     try {
         const loggingCfg: Record<string, unknown> = (configAny.logging || {}) as Record<string, unknown>
         const webhookCfg = configData.webhook
@@ -291,9 +291,9 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
         console.error('[Logger] Failed to enqueue webhook log:', error)
     }
 
-    // Return an Error when logging an error so callers can `throw log(...)`
+    // 记录错误时返回一个Error，以便调用者可以 `throw log(...)`
     if (type === 'error') {
-        // CommunityReporter disabled per project policy
+        // 根据项目政策禁用CommunityReporter
         return new Error(cleanStr)
     }
 }

@@ -9,14 +9,14 @@ export interface QuerySource {
 export interface QueryDiversityConfig {
   sources: Array<'google-trends' | 'reddit' | 'news' | 'wikipedia' | 'local-fallback'>
   deduplicate: boolean
-  mixStrategies: boolean // Mix different source types in same session
+  mixStrategies: boolean // 在同一会话中混合不同来源类型
   maxQueriesPerSource: number
   cacheMinutes: number
 }
 
 /**
- * QueryDiversityEngine fetches search queries from multiple sources to avoid patterns.
- * Supports Google Trends, Reddit, News APIs, Wikipedia, and local fallbacks.
+ * QueryDiversityEngine 从多个来源获取搜索查询以避免模式。
+ * 支持 Google 趋势、Reddit、新闻 API、维基百科和本地回退。
  */
 export class QueryDiversityEngine {
   private config: QueryDiversityConfig
@@ -43,19 +43,19 @@ export class QueryDiversityEngine {
         const queries = await this.getFromSource(sourceName)
         allQueries.push(...queries.slice(0, this.config.maxQueriesPerSource))
       } catch (error) {
-        // Silently fail and try other sources
+        // 静默失败并尝试其他来源
       }
     }
 
-    // Deduplicate
+    // 去重
     let final = this.config.deduplicate ? Array.from(new Set(allQueries)) : allQueries
 
-    // Mix strategies: interleave queries from different sources
+    // 混合策略：交错来自不同来源的查询
     if (this.config.mixStrategies && this.config.sources.length > 1) {
       final = this.interleaveQueries(final, count)
     }
 
-    // Shuffle and limit to requested count
+    // 洗牌并限制到请求数量
     final = this.shuffleArray(final).slice(0, count)
 
     return final.length > 0 ? final : this.getLocalFallback(count)
@@ -89,7 +89,7 @@ export class QueryDiversityEngine {
         queries = this.getLocalFallback(20)
         break
       default:
-        // Unknown source, skip silently
+        // 未知来源，静默跳过
         break
     }
 
@@ -279,13 +279,13 @@ export class QueryDiversityEngine {
   }
 
   /**
-   * Interleave queries from different sources for diversity
+   * 交错来自不同来源的查询以增加多样性
    */
   private interleaveQueries(queries: string[], targetCount: number): string[] {
     const result: string[] = []
     const sourceMap = new Map<string, string[]>()
 
-    // Group queries by estimated source (simple heuristic)
+    // 按估计来源分组查询（简单启发式）
     for (const q of queries) {
       const source = this.guessSource(q)
       if (!sourceMap.has(source)) {

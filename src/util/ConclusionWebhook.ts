@@ -89,7 +89,7 @@ export async function ConclusionWebhook(
         embed.fields = fields
     }
 
-    // Use custom webhook settings if provided, otherwise fall back to defaults
+    // 如果提供了自定义webhook设置，则使用，否则回退到默认值
     const webhookUsername = config.webhook?.username || config.conclusionWebhook?.username || 'Microsoft Rewards'
     const webhookAvatarUrl = config.webhook?.avatarUrl || config.conclusionWebhook?.avatarUrl || DISCORD.AVATAR_URL
 
@@ -114,7 +114,7 @@ export async function ConclusionWebhook(
             } catch (error) {
                 lastError = error
                 if (attempt < maxAttempts) {
-                    // Exponential backoff: 1s, 2s, 4s
+                    // 指数退避：1s，2s，4s
                     const delayMs = 1000 * Math.pow(2, attempt - 1)
                     await new Promise(resolve => setTimeout(resolve, delayMs))
                 }
@@ -131,7 +131,7 @@ export async function ConclusionWebhook(
         Array.from(urls).map((url, index) => postWebhook(url, `webhook-${index + 1}`))
     )
 
-    // Optional NTFY notification
+    // 可选NTFY通知
     if (config.ntfy?.enabled && config.ntfy.url && config.ntfy.topic) {
         const message = `${title}\n${description}${fields ? '\n\n' + fields.map(f => `${f.name}: ${f.value}`).join('\n') : ''}`
         const ntfyType = color === 0xFF0000 ? 'error' : color === 0xFFAA00 ? 'warn' : 'log'
@@ -154,7 +154,7 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
 
     if (!hasConclusion && !hasWebhook) return
 
-    // Helper to format duration
+    // 格式化持续时间的辅助函数
     const formatDuration = (ms: number): string => {
         const totalSeconds = Math.floor(ms / 1000)
         const hours = Math.floor(totalSeconds / 3600)
@@ -166,7 +166,7 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
         return `${seconds}s`
     }
 
-    // Helper to create progress bar (future use)
+    // 创建进度条的辅助函数（未来使用）
     // const createProgressBar = (current: number, max: number, length: number = 10): string => {
     //     const percentage = Math.min(100, Math.max(0, (current / max) * 100))
     //     const filled = Math.round((percentage / 100) * length)
@@ -174,35 +174,35 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
     //     return `${'█'.repeat(filled)}${'░'.repeat(empty)} ${percentage.toFixed(0)}%`
     // }
 
-    // Determine overall status and color
+    // 确定总体状态和颜色
     let statusEmoji = '✅'
-    let statusText = 'Success'
+    let statusText = '成功'
     let embedColor: number = DISCORD.COLOR_GREEN
 
     if (data.accountsBanned > 0) {
         statusEmoji = '🚫'
-        statusText = 'Banned Accounts Detected'
+        statusText = '检测到封禁账户'
         embedColor = DISCORD.COLOR_RED
     } else if (data.accountsWithErrors > 0) {
         statusEmoji = '⚠️'
-        statusText = 'Completed with Warnings'
+        statusText = '完成但有警告'
         embedColor = DISCORD.COLOR_ORANGE
     }
 
-    // Build main summary description
+    // 构建主摘要描述
     const mainDescription = [
-        `**Status:** ${statusEmoji} ${statusText}`,
-        `**Version:** v${data.version} • **Run ID:** \`${data.runId}\``,
+        `**状态:** ${statusEmoji} ${statusText}`,
+        `**版本:** v${data.version} • **运行ID:** \`${data.runId}\``,
         '',
         '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
     ].join('\n')
 
-    // Build global statistics field
+    // 构建全局统计字段
     const globalStats = [
-        `**💎 Total Points Earned**`,
+        `**💎 总积分赚取**`,
         `\`${data.totalInitial.toLocaleString()}\` → \`${data.totalEnd.toLocaleString()}\` **(+${data.totalCollected.toLocaleString()})**`,
         '',
-        `**📊 Accounts Processed**`,
+        `**📊 处理账户**`,
         `✅ Success: **${data.successes}** | ⚠️ Errors: **${data.accountsWithErrors}** | 🚫 Banned: **${data.accountsBanned}**`,
         `Total: **${data.totalAccounts}** ${data.totalAccounts === 1 ? 'account' : 'accounts'}`,
         '',
@@ -211,7 +211,7 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
         `Total Runtime: **${formatDuration(data.totalDuration)}**`
     ].join('\n')
 
-    // Build per-account breakdown (split if too many accounts)
+    // 构建每个账户的详细信息（如果账户太多则拆分）
     const accountFields: DiscordField[] = []
     const maxAccountsPerField = 5
     const accountChunks: AccountSummary[][] = []
@@ -228,22 +228,22 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
             const emailShort = acc.email.length > 25 ? acc.email.substring(0, 22) + '...' : acc.email
             
             accountLines.push(`${statusIcon} **${emailShort}**`)
-            accountLines.push(`└ Points: **+${acc.totalCollected}** (🖥️ ${acc.desktopCollected} • 📱 ${acc.mobileCollected})`)
-            accountLines.push(`└ Duration: ${formatDuration(acc.durationMs)}`)
+            accountLines.push(`└ 积分: **+${acc.totalCollected}** (🖥️ ${acc.desktopCollected} • 📱 ${acc.mobileCollected})`)
+            accountLines.push(`└ 持续时间: ${formatDuration(acc.durationMs)}`)
             
             if (acc.banned?.status) {
-                accountLines.push(`└ 🚫 **Banned:** ${acc.banned.reason || 'Account suspended'}`)
+                accountLines.push(`└ 🚫 **封禁:** ${acc.banned.reason || '账户暂停'}`)
             } else if (acc.errors.length > 0) {
                 const errorPreview = acc.errors.slice(0, 1).join(', ')
-                accountLines.push(`└ ⚠️ **Error:** ${errorPreview.length > 50 ? errorPreview.substring(0, 47) + '...' : errorPreview}`)
+                accountLines.push(`└ ⚠️ **错误:** ${errorPreview.length > 50 ? errorPreview.substring(0, 47) + '...' : errorPreview}`)
             }
             
-            accountLines.push('') // Empty line between accounts
+            accountLines.push('') // 账户之间空行
         })
 
         const fieldName = accountChunks.length > 1 
-            ? `📈 Account Details (${chunkIndex + 1}/${accountChunks.length})`
-            : '📈 Account Details'
+            ? `📈 账户详情 (${chunkIndex + 1}/${accountChunks.length})`
+            : '📈 账户详情'
 
         accountFields.push({
             name: fieldName,
@@ -252,17 +252,17 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
         })
     })
 
-    // Create embeds
+    // 创建嵌入
     const embeds: DiscordEmbed[] = []
 
-    // Main embed with summary
+    // 带有摘要的主嵌入
     embeds.push({
-        title: '🎯 Microsoft Rewards — Daily Summary',
+        title: '🎯 Microsoft Rewards — 每日摘要',
         description: mainDescription,
         color: embedColor,
         fields: [
             {
-                name: '📊 Global Statistics',
+                name: '📊 全局统计',
                 value: globalStats,
                 inline: false
             }
@@ -277,15 +277,15 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
         timestamp: new Date().toISOString()
     })
 
-    // Add account details in separate embed(s) if needed
+    // 如需要，在单独的嵌入中添加账户详情
     if (accountFields.length > 0) {
-        // If we have multiple fields, split into multiple embeds
+        // 如果我们有多个字段，拆分为多个嵌入
         accountFields.forEach((field, index) => {
             if (index === 0 && embeds[0] && embeds[0].fields) {
-                // Add first field to main embed
+                // 将第一个字段添加到主嵌入
                 embeds[0].fields.push(field)
             } else {
-                // Create additional embeds for remaining fields
+                // 为剩余字段创建额外嵌入
                 embeds.push({
                     color: embedColor,
                     fields: [field],
@@ -295,7 +295,7 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
         })
     }
 
-    // Use custom webhook settings
+    // 使用自定义webhook设置
     const webhookUsername = config.conclusionWebhook?.username || config.webhook?.username || 'Microsoft Rewards'
     const webhookAvatarUrl = config.conclusionWebhook?.avatarUrl || config.webhook?.avatarUrl || DISCORD.AVATAR_URL
 
@@ -336,23 +336,23 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
         Array.from(urls).map((url, index) => postWebhook(url, `conclusion-webhook-${index + 1}`))
     )
 
-    // Optional NTFY notification (simplified summary)
+    // 可选NTFY通知（简化摘要）
     if (config.ntfy?.enabled && config.ntfy.url && config.ntfy.topic) {
         const message = [
-            `🎯 Microsoft Rewards Summary`,
-            `Status: ${statusText}`,
-            `Points: ${data.totalInitial} → ${data.totalEnd} (+${data.totalCollected})`,
-            `Accounts: ${data.successes}/${data.totalAccounts} successful`,
-            `Duration: ${formatDuration(data.totalDuration)}`
+            `🎯 Microsoft Rewards 摘要`,
+            `状态: ${statusText}`,
+            `积分: ${data.totalInitial} → ${data.totalEnd} (+${data.totalCollected})`,
+            `账户: ${data.successes}/${data.totalAccounts} 成功`,
+            `持续时间: ${formatDuration(data.totalDuration)}`
         ].join('\n')
         
         const ntfyType = embedColor === DISCORD.COLOR_RED ? 'error' : embedColor === DISCORD.COLOR_ORANGE ? 'warn' : 'log'
 
         try {
             await Ntfy(message, ntfyType)
-            log('main', 'NTFY', 'Conclusion notification sent successfully')
+            log('main', 'NTFY', '结论通知发送成功')
         } catch (error) {
-            log('main', 'NTFY', `Failed to send conclusion notification: ${error instanceof Error ? error.message : String(error)}`, 'error')
+            log('main', 'NTFY', `发送结论通知失败: ${error instanceof Error ? error.message : String(error)}`, 'error')
         }
     }
 }

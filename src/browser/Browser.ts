@@ -44,8 +44,8 @@ class Browser {
             let headlessValue = envForceHeadless ? true : (legacyHeadless ?? nestedHeadless ?? false)
             const headless: boolean = Boolean(headlessValue)
 
-            const engineName = 'chromium' // current hard-coded engine
-            this.bot.log(this.bot.isMobile, 'BROWSER', `Launching ${engineName} (headless=${headless})`) // explicit engine log
+            const engineName = 'chromium' // 当前硬编码的引擎
+            this.bot.log(this.bot.isMobile, 'BROWSER', `启动 ${engineName} (headless=${headless})`) // 明确的引擎日志
             browser = await playwright.chromium.launch({
                 // Optional: uncomment to use Edge instead of Chromium
                 // channel: 'msedge',
@@ -62,11 +62,11 @@ class Browser {
             })
         } catch (e: unknown) {
             const msg = (e instanceof Error ? e.message : String(e))
-            // Common missing browser executable guidance
+            // 常见的浏览器可执行文件缺失指导
             if (/Executable doesn't exist/i.test(msg)) {
-                this.bot.log(this.bot.isMobile, 'BROWSER', 'Chromium not installed for Playwright. Run "npm run pre-build" to install all dependencies (or set AUTO_INSTALL_BROWSERS=1 to auto-attempt).', 'error')
+                this.bot.log(this.bot.isMobile, 'BROWSER', 'Playwright未安装Chromium。运行"npm run pre-build"来安装所有依赖项（或设置AUTO_INSTALL_BROWSERS=1以自动尝试）。', 'error')
             } else {
-                this.bot.log(this.bot.isMobile, 'BROWSER', 'Failed to launch browser: ' + msg, 'error')
+                this.bot.log(this.bot.isMobile, 'BROWSER', '启动浏览器失败: ' + msg, 'error')
             }
             throw e
         }

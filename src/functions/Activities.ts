@@ -33,14 +33,14 @@ export default class Activities {
         this.bot = bot
     }
 
-    // Register external/custom handlers (optional extension point)
+    // 注册外部/自定义处理器（可选扩展点）
     registerHandler(handler: ActivityHandler) {
         this.handlers.push(handler)
     }
 
-    // Centralized dispatcher for activities from dashboard/punchcards
+    // 仪表板/打卡卡活动的集中调度器
     async run(page: Page, activity: MorePromotion | PromotionalItem): Promise<void> {
-        // First, try custom handlers (if any)
+        // 首先，尝试自定义处理器（如果有的话）
         for (const h of this.handlers) {
             try {
                 if (h.canHandle(activity)) {
@@ -48,7 +48,7 @@ export default class Activities {
                     return
                 }
             } catch (e) {
-                this.bot.log(this.bot.isMobile, 'ACTIVITY', `Custom handler ${(h.id || 'unknown')} failed: ${e instanceof Error ? e.message : e}`, 'error')
+                this.bot.log(this.bot.isMobile, 'ACTIVITY', `自定义处理器 ${(h.id || '未知')} 失败: ${e instanceof Error ? e.message : e}`, 'error')
             }
         }
 
@@ -74,11 +74,11 @@ export default class Activities {
                     await this.doUrlReward(page)
                     break
                 default:
-                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${String((activity as { promotionType?: string }).promotionType)}"!`, 'warn')
+                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `跳过活动 "${activity.title}" | 原因: 不支持的类型: "${String((activity as { promotionType?: string }).promotionType)}"!`, 'warn')
                     break
             }
         } catch (e) {
-            this.bot.log(this.bot.isMobile, 'ACTIVITY', `Dispatcher error for "${activity.title}": ${e instanceof Error ? e.message : e}`, 'error')
+            this.bot.log(this.bot.isMobile, 'ACTIVITY', `"${activity.title}" 的调度器错误: ${e instanceof Error ? e.message : e}`, 'error')
         }
     }
 
@@ -98,7 +98,7 @@ export default class Activities {
     private classifyActivity(activity: MorePromotion | PromotionalItem): ActivityKind {
         const type = (activity.promotionType || '').toLowerCase()
         if (type === 'quiz') {
-            // Distinguish Poll/ABC/ThisOrThat vs general quiz using current heuristics
+            // 使用当前启发式方法区分投票/ABC/此或彼与一般测验
             const max = activity.pointProgressMax
             const url = (activity.destinationUrl || '').toLowerCase()
             if (max === 10) {

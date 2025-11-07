@@ -11,7 +11,7 @@ export class ThisOrThat extends Workers {
 
 
         try {
-            // Check if the quiz has been started or not
+            // 检查测验是否已经开始
             const quizNotStarted = await page.waitForSelector('#rqStartQuiz', { state: 'visible', timeout: DELAYS.THIS_OR_THAT_START }).then(() => true).catch(() => false)
             if (quizNotStarted) {
                 await page.click('#rqStartQuiz')

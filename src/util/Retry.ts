@@ -23,7 +23,7 @@ export class Retry {
       jitter: 0.2
     }
   const merged: ConfigRetryPolicy = { ...(policy || {}) }
-    // normalize string durations
+    // 标准化字符串持续时间
     const util = new Util()
     const parse = (v: number | string) => {
       if (typeof v === 'number') return v

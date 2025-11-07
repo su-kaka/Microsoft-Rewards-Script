@@ -1,5 +1,5 @@
-// Clean refactored Login implementation
-// Public API preserved: login(), getMobileAccessToken()
+// 干净重构的登录实现
+// 保留的公共API：login()，getMobileAccessToken()
 
 import type { Page, Locator } from 'playwright'
 import * as crypto from 'crypto'
@@ -11,7 +11,7 @@ import { MicrosoftRewardsBot } from '../index'
 import { OAuth } from '../interface/OAuth'
 
 // -------------------------------
-// Constants / Tunables
+// 常量/可调参数
 // -------------------------------
 const SELECTORS = {
   emailInput: 'input[type="email"]',
@@ -40,7 +40,7 @@ const DEFAULT_TIMEOUTS = {
   long: 3000
 }
 
-// Security pattern bundle
+// 安全模式包
 const SIGN_IN_BLOCK_PATTERNS: { re: RegExp; label: string }[] = [
   { re: /we can['’`]?t sign you in/i, label: 'cant-sign-in' },
   { re: /incorrect account or password too many times/i, label: 'too-many-incorrect' },
@@ -77,13 +77,13 @@ export class Login {
   // --------------- Public API ---------------
   async login(page: Page, email: string, password: string, totpSecret?: string) {
     try {
-      // Clear any existing intervals from previous runs
+      // 清除之前运行的任何现有间隔
       if (this.compromisedInterval) {
         clearInterval(this.compromisedInterval)
         this.compromisedInterval = undefined
       }
       
-      this.bot.log(this.bot.isMobile, 'LOGIN', 'Starting login process')
+      this.bot.log(this.bot.isMobile, 'LOGIN', '开始登录过程')
       this.currentTotpSecret = (totpSecret && totpSecret.trim()) || undefined
 
       await page.goto('https://www.bing.com/rewards/dashboard')
@@ -96,21 +96,21 @@ export class Login {
       if (!already) {
         await this.performLoginFlow(page, email, password)
       } else {
-        this.bot.log(this.bot.isMobile, 'LOGIN', 'Session already authenticated')
+        this.bot.log(this.bot.isMobile, 'LOGIN', '会话已认证')
         await this.checkAccountLocked(page)
       }
 
       await this.verifyBingContext(page)
       await saveSessionData(this.bot.config.sessionPath, page.context(), email, this.bot.isMobile)
-      this.bot.log(this.bot.isMobile, 'LOGIN', 'Login complete (session saved)')
+      this.bot.log(this.bot.isMobile, 'LOGIN', '登录完成（会话已保存）')
       this.currentTotpSecret = undefined
     } catch (e) {
-      throw this.bot.log(this.bot.isMobile, 'LOGIN', 'Failed login: ' + e, 'error')
+      throw this.bot.log(this.bot.isMobile, 'LOGIN', '登录失败: ' + e, 'error')
     }
   }
 
   async getMobileAccessToken(page: Page, email: string) {
-    // Reuse same FIDO disabling
+    // 重用相同的FIDO禁用
     await this.disableFido(page)
     const url = new URL(this.authBaseUrl)
     url.searchParams.set('response_type', 'code')
@@ -123,7 +123,7 @@ export class Login {
 
     await page.goto(url.href)
     const start = Date.now()
-    this.bot.log(this.bot.isMobile, 'LOGIN-APP', 'Authorizing mobile scope...')
+    this.bot.log(this.bot.isMobile, 'LOGIN-APP', '授权移动范围...')
     let code = ''
     while (Date.now() - start < DEFAULT_TIMEOUTS.loginMaxMs) {
       await this.handlePasskeyPrompts(page, 'oauth')
@@ -134,7 +134,7 @@ export class Login {
       }
       await this.bot.utils.wait(1000)
     }
-    if (!code) throw this.bot.log(this.bot.isMobile, 'LOGIN-APP', 'OAuth code not received in time', 'error')
+    if (!code) throw this.bot.log(this.bot.isMobile, 'LOGIN-APP', '未及时收到OAuth代码', 'error')
 
     const form = new URLSearchParams()
     form.append('grant_type', 'authorization_code')
@@ -145,7 +145,7 @@ export class Login {
     const req: AxiosRequestConfig = { url: this.tokenUrl, method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, data: form.toString() }
     const resp = await this.bot.axios.request(req)
     const data: OAuth = resp.data
-    this.bot.log(this.bot.isMobile, 'LOGIN-APP', `Authorized in ${Math.round((Date.now()-start)/1000)}s`)
+    this.bot.log(this.bot.isMobile, 'LOGIN-APP', `在 ${Math.round((Date.now()-start)/1000)} 秒内授权`)
     return data.access_token
   }
 
@@ -157,14 +157,14 @@ export class Login {
     await this.bot.utils.wait(500)
     await this.tryRecoveryMismatchCheck(page, email)
     if (this.bot.compromisedModeActive && this.bot.compromisedReason === 'recovery-mismatch') {
-      this.bot.log(this.bot.isMobile,'LOGIN','Recovery mismatch detected – stopping before password entry','warn')
+      this.bot.log(this.bot.isMobile,'LOGIN','检测到恢复不匹配 – 在输入密码前停止','warn')
       return
     }
-    // Try switching to password if a locale link is present (FR/EN)
+    // 如果存在本地化链接（法语/英语），尝试切换到密码
     await this.switchToPasswordLink(page)
     await this.inputPasswordOr2FA(page, password)
     if (this.bot.compromisedModeActive && this.bot.compromisedReason === 'sign-in-blocked') {
-      this.bot.log(this.bot.isMobile, 'LOGIN', 'Blocked sign-in detected — halting.', 'warn')
+      this.bot.log(this.bot.isMobile, 'LOGIN', '检测到登录被阻止 — 停止。', 'warn')
       return
     }
     await this.checkAccountLocked(page)
@@ -174,49 +174,49 @@ export class Login {
   // --------------- Input Steps ---------------
   private async inputEmail(page: Page, email: string) {
     const field = await page.waitForSelector(SELECTORS.emailInput, { timeout: 5000 }).catch(()=>null)
-    if (!field) { this.bot.log(this.bot.isMobile, 'LOGIN', 'Email field not present', 'warn'); return }
+    if (!field) { this.bot.log(this.bot.isMobile, 'LOGIN', '邮箱字段不存在', 'warn'); return }
     const prefilled = await page.waitForSelector('#userDisplayName', { timeout: 1500 }).catch(()=>null)
     if (!prefilled) {
       await page.fill(SELECTORS.emailInput, '')
       await page.fill(SELECTORS.emailInput, email)
     } else {
-      this.bot.log(this.bot.isMobile, 'LOGIN', 'Email prefilled')
+      this.bot.log(this.bot.isMobile, 'LOGIN', '邮箱已预填')
     }
     const next = await page.waitForSelector(SELECTORS.submitBtn, { timeout: 2000 }).catch(()=>null)
-    if (next) { await next.click().catch(()=>{}); this.bot.log(this.bot.isMobile, 'LOGIN', 'Submitted email') }
+    if (next) { await next.click().catch(()=>{}); this.bot.log(this.bot.isMobile, 'LOGIN', '已提交邮箱') }
   }
 
   private async inputPasswordOr2FA(page: Page, password: string) {
-    // Some flows require switching to password first
+    // 某些流程需要先切换到密码
     const switchBtn = await page.waitForSelector('#idA_PWD_SwitchToPassword', { timeout: 1500 }).catch(()=>null)
     if (switchBtn) { await switchBtn.click().catch(()=>{}); await this.bot.utils.wait(1000) }
 
-    // Rare flow: list of methods -> choose password
+    // 罕见流程：方法列表 -> 选择密码
     const passwordField = await page.waitForSelector(SELECTORS.passwordInput, { timeout: 4000 }).catch(()=>null)
     if (!passwordField) {
       const blocked = await this.detectSignInBlocked(page)
       if (blocked) return
 
-      // Log that we're handling the "Get a code to sign in" flow
-      this.bot.log(this.bot.isMobile, 'LOGIN', 'Attempting to handle "Get a code to sign in" flow')
+      // 记录我们正在处理"获取代码登录"流程
+      this.bot.log(this.bot.isMobile, 'LOGIN', '尝试处理"获取代码登录"流程')
 
-      // Try to handle "Other ways to sign in" flow first
+      // 首先尝试处理"其他登录方式"流程
       const otherWaysHandled = await this.handleOtherWaysToSignIn(page)
       if (otherWaysHandled) {
-        // Try to find password field again after clicking "Other ways"
+        // 点击"其他方式"后再次尝试查找密码字段
         const passwordFieldAfter = await page.waitForSelector(SELECTORS.passwordInput, { timeout: 3000 }).catch(()=>null)
         if (passwordFieldAfter) {
-          this.bot.log(this.bot.isMobile, 'LOGIN', 'Password field found after "Other ways" flow')
+          this.bot.log(this.bot.isMobile, 'LOGIN', '在"其他方式"流程后找到密码字段')
           await page.fill(SELECTORS.passwordInput, '')
           await page.fill(SELECTORS.passwordInput, password)
           const submit = await page.waitForSelector(SELECTORS.submitBtn, { timeout: 2000 }).catch(()=>null)
-          if (submit) { await submit.click().catch(()=>{}); this.bot.log(this.bot.isMobile, 'LOGIN', 'Password submitted') }
+          if (submit) { await submit.click().catch(()=>{}); this.bot.log(this.bot.isMobile, 'LOGIN', '密码已提交') }
           return
         }
       }
 
-      // If still no password field -> likely 2FA (approvals) first
-      this.bot.log(this.bot.isMobile, 'LOGIN', 'Password field absent — invoking 2FA handler', 'warn')
+      // 如果仍然没有密码字段 -> 可能是首先使用2FA（审批）
+      this.bot.log(this.bot.isMobile, 'LOGIN', '密码字段不存在 — 调用2FA处理程序', 'warn')
       await this.handle2FA(page)
       return
     }
@@ -227,14 +227,14 @@ export class Login {
     await page.fill(SELECTORS.passwordInput, '')
     await page.fill(SELECTORS.passwordInput, password)
     const submit = await page.waitForSelector(SELECTORS.submitBtn, { timeout: 2000 }).catch(()=>null)
-    if (submit) { await submit.click().catch(()=>{}); this.bot.log(this.bot.isMobile, 'LOGIN', 'Password submitted') }
+    if (submit) { await submit.click().catch(()=>{}); this.bot.log(this.bot.isMobile, 'LOGIN', '密码已提交') }
   }
 
 
   // --------------- Other Ways to Sign In Handling ---------------
   private async handleOtherWaysToSignIn(page: Page): Promise<boolean> {
     try {
-      // Look for "Other ways to sign in" - typically a span with role="button"
+      // 查找"其他登录方式" - 通常是一个role="button"的span
       const otherWaysSelectors = [
         'span[role="button"]:has-text("Other ways to sign in")',
         'span:has-text("Other ways to sign in")',
@@ -248,8 +248,8 @@ export class Login {
         const element = await page.waitForSelector(selector, { timeout: 1000 }).catch(() => null)
         if (element && await element.isVisible().catch(() => false)) {
           await element.click().catch(() => {})
-          this.bot.log(this.bot.isMobile, 'LOGIN', 'Clicked "Other ways to sign in"')
-          await this.bot.utils.wait(2000) // Wait for options to appear
+          this.bot.log(this.bot.isMobile, 'LOGIN', '点击了"其他登录方式"')
+          await this.bot.utils.wait(2000) // 等待选项出现
           clicked = true
           break
         }
@@ -259,7 +259,7 @@ export class Login {
         return false
       }
 
-      // Now look for "Use your password" option
+      // 现在查找"使用您的密码"选项
       const usePasswordSelectors = [
         'span[role="button"]:has-text("Use your password")',
         'span:has-text("Use your password")',
@@ -274,8 +274,8 @@ export class Login {
         const element = await page.waitForSelector(selector, { timeout: 1500 }).catch(() => null)
         if (element && await element.isVisible().catch(() => false)) {
           await element.click().catch(() => {})
-          this.bot.log(this.bot.isMobile, 'LOGIN', 'Clicked "Use your password"')
-          await this.bot.utils.wait(2000) // Wait for password field to appear
+          this.bot.log(this.bot.isMobile, 'LOGIN', '点击了"使用您的密码"')
+          await this.bot.utils.wait(2000) // 等待密码字段出现
           return true
         }
       }
@@ -283,7 +283,7 @@ export class Login {
       return false
 
     } catch (error) {
-      this.bot.log(this.bot.isMobile, 'LOGIN', 'Error in handleOtherWaysToSignIn: ' + error, 'warn')
+      this.bot.log(this.bot.isMobile, 'LOGIN', 'handleOtherWaysToSignIn中的错误: ' + error, 'warn')
       return false
     }
   }
@@ -291,7 +291,7 @@ export class Login {
   // --------------- 2FA Handling ---------------
   private async handle2FA(page: Page) {
     try {
-      // Dismiss any popups/dialogs before checking 2FA (Terms Update, etc.)
+      // 检查2FA之前关闭任何弹窗/对话框（条款更新等）
       await this.bot.browser.utils.tryDismissAllMessages(page)
       await this.bot.utils.wait(500)
 
@@ -307,7 +307,7 @@ export class Login {
       if (number) { await this.approveAuthenticator(page, number); return }
       await this.handleSMSOrTotp(page)
     } catch (e) {
-      this.bot.log(this.bot.isMobile, 'LOGIN', '2FA error: ' + e, 'warn')
+      this.bot.log(this.bot.isMobile, 'LOGIN', '2FA 错误: ' + e, 'warn')
     }
   }
 
@@ -316,10 +316,10 @@ export class Login {
       const el = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { timeout: 2500 })
       return (await el.textContent())?.trim() || null
     } catch {
-      // Attempt resend loop in parallel mode
+      // 并行模式下尝试重新发送循环
       if (this.bot.config.parallel) {
-        this.bot.log(this.bot.isMobile, 'LOGIN', 'Parallel mode: throttling authenticator push requests', 'log', 'yellow')
-        for (let attempts = 0; attempts < 6; attempts++) { // max 6 minutes retry window
+        this.bot.log(this.bot.isMobile, 'LOGIN', '并行模式: 限制验证器推送请求', 'log', 'yellow')
+        for (let attempts = 0; attempts < 6; attempts++) { // 最多6分钟重试窗口
           const resend = await page.waitForSelector('button[aria-describedby="pushNotificationsTitle errorDescription"]', { timeout: 1500 }).catch(()=>null)
           if (!resend) break
           await this.bot.utils.wait(60000)
@@ -336,26 +336,26 @@ export class Login {
   }
 
   private async approveAuthenticator(page: Page, numberToPress: string) {
-    for (let cycle = 0; cycle < 6; cycle++) { // max ~6 refresh cycles
+    for (let cycle = 0; cycle < 6; cycle++) { // 最多~6次刷新周期
       try {
-        this.bot.log(this.bot.isMobile, 'LOGIN', `Approve login in Authenticator (press ${numberToPress})`)
+        this.bot.log(this.bot.isMobile, 'LOGIN', `在验证器中批准登录 (按 ${numberToPress})`)
         await page.waitForSelector('form[name="f1"]', { state: 'detached', timeout: 60000 })
-        this.bot.log(this.bot.isMobile, 'LOGIN', 'Authenticator approval successful')
+        this.bot.log(this.bot.isMobile, 'LOGIN', '验证器批准成功')
         return
       } catch {
-        this.bot.log(this.bot.isMobile, 'LOGIN', 'Authenticator code expired – refreshing')
+        this.bot.log(this.bot.isMobile, 'LOGIN', '验证器代码已过期 – 正在刷新')
         const retryBtn = await page.waitForSelector(SELECTORS.passkeyPrimary, { timeout: 3000 }).catch(()=>null)
         if (retryBtn) await retryBtn.click().catch(()=>{})
         const refreshed = await this.fetchAuthenticatorNumber(page)
-        if (!refreshed) { this.bot.log(this.bot.isMobile, 'LOGIN', 'Could not refresh authenticator code', 'warn'); return }
+        if (!refreshed) { this.bot.log(this.bot.isMobile, 'LOGIN', '无法刷新验证器代码', 'warn'); return }
         numberToPress = refreshed
       }
     }
-    this.bot.log(this.bot.isMobile,'LOGIN','Authenticator approval loop exited (max cycles reached)','warn')
+    this.bot.log(this.bot.isMobile,'LOGIN','验证器批准循环已退出（达到最大周期）','warn')
   }
 
   private async handleSMSOrTotp(page: Page) {
-    // TOTP auto entry (second chance if ensureTotpInput needed longer)
+    // TOTP自动输入（如果ensureTotpInput需要更长时间则为第二次机会）
     if (this.currentTotpSecret) {
       try {
         const totpSelector = await this.ensureTotpInput(page)
@@ -366,34 +366,34 @@ export class Login {
       } catch {/* ignore */}
     }
 
-    // Manual prompt with periodic page check
-    this.bot.log(this.bot.isMobile, 'LOGIN', 'Waiting for user 2FA code (SMS / Email / App fallback)')
+    // 手动提示，定期页面检查
+    this.bot.log(this.bot.isMobile, 'LOGIN', '等待用户2FA代码（短信/邮箱/应用回退）')
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
     
-    // Monitor page changes while waiting for user input
+    // 等待用户输入时监控页面变化
     let userInput: string | null = null
     let checkInterval: NodeJS.Timeout | null = null
     
     try {
       const inputPromise = new Promise<string>(res => {
-        rl.question('Enter 2FA code:\n', ans => {
+        rl.question('输入2FA代码:\n', ans => {
           if (checkInterval) clearInterval(checkInterval)
           rl.close()
           res(ans.trim())
         })
       })
 
-      // Check every 2 seconds if user manually progressed past the dialog
+      // 每2秒钟检查一次用户是否手动跳过对话框
       checkInterval = setInterval(async () => {
         try {
           await this.bot.browser.utils.tryDismissAllMessages(page)
-          // Check if we're no longer on 2FA page
+          // 检查是否不再在2FA页面上
           const still2FA = await page.locator('input[name="otc"]').first().isVisible({ timeout: 500 }).catch(() => false)
           if (!still2FA) {
-            this.bot.log(this.bot.isMobile, 'LOGIN', 'Page changed during 2FA wait (user may have clicked Next)', 'warn')
+            this.bot.log(this.bot.isMobile, 'LOGIN', '2FA等待期间页面已更改（用户可能已点击"下一步"）', 'warn')
             if (checkInterval) clearInterval(checkInterval)
             rl.close()
-            userInput = 'skip' // Signal to skip submission
+            userInput = 'skip' // 跳过提交的信号
           }
         } catch {/* ignore */}
       }, 2000)
@@ -401,15 +401,15 @@ export class Login {
       const code = await inputPromise
       
       if (code === 'skip' || userInput === 'skip') {
-        this.bot.log(this.bot.isMobile, 'LOGIN', 'Skipping 2FA code submission (page progressed)')
+        this.bot.log(this.bot.isMobile, 'LOGIN', '跳过2FA代码提交（页面已前进）')
         return
       }
 
       await page.fill('input[name="otc"]', code)
       await page.keyboard.press('Enter')
-      this.bot.log(this.bot.isMobile, 'LOGIN', '2FA code submitted')
+      this.bot.log(this.bot.isMobile, 'LOGIN', '2FA代码已提交')
     } finally {
-      // Ensure cleanup happens even if errors occur
+      // 确保即使发生错误也执行清理
       if (checkInterval) clearInterval(checkInterval)
       try { rl.close() } catch {/* ignore */}
     }
@@ -423,13 +423,13 @@ export class Login {
     for (let i = 0; i < attempts; i++) {
       let acted = false
 
-      // Step 1: expose alternative verification options if hidden
+      // 步骤1：如果隐藏则显示替代验证选项
       if (!acted) {
         acted = await this.clickFirstVisibleSelector(page, this.totpAltOptionSelectors())
         if (acted) await this.bot.utils.wait(900)
       }
 
-      // Step 2: choose authenticator code option if available
+      // 步骤2：如果可用则选择验证器代码选项
       if (!acted) {
         acted = await this.clickFirstVisibleSelector(page, this.totpChallengeSelectors())
         if (acted) await this.bot.utils.wait(900)
@@ -449,25 +449,25 @@ export class Login {
       const code = generateTOTP(this.currentTotpSecret!.trim())
       const input = page.locator(selector).first()
       if (!await input.isVisible().catch(()=>false)) {
-        this.bot.log(this.bot.isMobile, 'LOGIN', 'TOTP input unexpectedly hidden', 'warn')
+        this.bot.log(this.bot.isMobile, 'LOGIN', 'TOTP输入意外隐藏', 'warn')
         return
       }
       await input.fill('')
       await input.fill(code)
-      // Use unified selector system
+      // 使用统一选择器系统
       const submit = await this.findFirstVisibleLocator(page, Login.TOTP_SELECTORS.submit)
       if (submit) {
         await submit.click().catch(()=>{})
       } else {
         await page.keyboard.press('Enter').catch(()=>{})
       }
-      this.bot.log(this.bot.isMobile, 'LOGIN', 'Submitted TOTP automatically')
+      this.bot.log(this.bot.isMobile, 'LOGIN', '自动提交TOTP')
     } catch (error) {
-      this.bot.log(this.bot.isMobile, 'LOGIN', 'Failed to submit TOTP automatically: ' + error, 'warn')
+      this.bot.log(this.bot.isMobile, 'LOGIN', '自动提交TOTP失败: ' + error, 'warn')
     }
   }
 
-  // Unified selector system - DRY principle
+  // 统一选择器系统 - DRY原则
   private static readonly TOTP_SELECTORS = {
     input: [
       'input[name="otc"]',
@@ -516,7 +516,7 @@ export class Login {
   private totpAltOptionSelectors(): readonly string[] { return Login.TOTP_SELECTORS.altOptions }
   private totpChallengeSelectors(): readonly string[] { return Login.TOTP_SELECTORS.challenge }
 
-  // Generic selector finder - reduces duplication from 3 functions to 1
+  // 通用选择器查找器 - 将3个函数的重复减少到1个
   private async findFirstVisibleSelector(page: Page, selectors: readonly string[]): Promise<string | null> {
     for (const sel of selectors) {
       const loc = page.locator(sel).first()
@@ -592,42 +592,42 @@ export class Login {
 
       const fallbackSelector = await this.waitForRewardsRoot(page, 6000)
       if (!fallbackSelector) {
-        throw this.bot.log(this.bot.isMobile, 'LOGIN', 'Portal root element missing after navigation', 'error')
+        throw this.bot.log(this.bot.isMobile, 'LOGIN', '导航后缺少门户根元素', 'error')
       }
-      this.bot.log(this.bot.isMobile, 'LOGIN', `Reached rewards portal via fallback (${fallbackSelector})`)
+      this.bot.log(this.bot.isMobile, 'LOGIN', `通过回退到达奖励门户 (${fallbackSelector})`)
       return
     }
 
-    this.bot.log(this.bot.isMobile, 'LOGIN', `Reached rewards portal (${portalSelector})`)
+    this.bot.log(this.bot.isMobile, 'LOGIN', `到达奖励门户 (${portalSelector})`)
   }
 
   private async verifyBingContext(page: Page) {
     try {
-      this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Verifying Bing auth context')
+      this.bot.log(this.bot.isMobile, 'LOGIN-BING', '验证Bing认证上下文')
       await page.goto('https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F')
       for (let i=0;i<5;i++) {
         const u = new URL(page.url())
         if (u.hostname === 'www.bing.com' && u.pathname === '/') {
           await this.bot.browser.utils.tryDismissAllMessages(page)
           const ok = await page.waitForSelector('#id_n', { timeout: 3000 }).then(()=>true).catch(()=>false)
-          if (ok || this.bot.isMobile) { this.bot.log(this.bot.isMobile,'LOGIN-BING','Bing verification passed'); break }
+          if (ok || this.bot.isMobile) { this.bot.log(this.bot.isMobile,'LOGIN-BING','Bing验证通过'); break }
         }
         await this.bot.utils.wait(1000)
       }
     } catch (e) {
-      this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Bing verification error: '+e, 'warn')
+      this.bot.log(this.bot.isMobile, 'LOGIN-BING', 'Bing验证错误: '+e, 'warn')
     }
   }
 
   private async checkAccountLocked(page: Page) {
     const locked = await page.waitForSelector('#serviceAbuseLandingTitle', { timeout: 1200 }).then(()=>true).catch(()=>false)
-    if (locked) throw this.bot.log(this.bot.isMobile,'CHECK-LOCKED','Account locked by Microsoft (serviceAbuseLandingTitle)','error')
+    if (locked) throw this.bot.log(this.bot.isMobile,'CHECK-LOCKED','账户被Microsoft锁定（serviceAbuseLandingTitle）','error')
   }
 
   // --------------- Passkey / Dialog Handling ---------------
   private async handlePasskeyPrompts(page: Page, context: 'main' | 'oauth') {
     let did = false
-    // Video heuristic
+    // 视频启发式
     const biometric = await page.waitForSelector(SELECTORS.biometricVideo, { timeout: 500 }).catch(()=>null)
     if (biometric) {
       const btn = await page.$(SELECTORS.passkeySecondary)
@@ -654,7 +654,7 @@ export class Login {
       }
     }
 
-    // KMSI prompt
+    // KMSI提示
     const kmsi = await page.waitForSelector(SELECTORS.kmsiVideo, { timeout: 400 }).catch(()=>null)
     if (kmsi) {
       const yes = await page.$(SELECTORS.passkeyPrimary)
@@ -699,10 +699,10 @@ export class Login {
       const email = this.bot.currentAccountEmail || 'unknown'
       const docsUrl = this.getDocsUrl('we-cant-sign-you-in')
       const incident: SecurityIncident = {
-        kind: 'We can\'t sign you in (blocked)',
+        kind: '我们无法登录（被阻止）',
         account: email,
-        details: [matched ? `Pattern: ${matched}` : 'Pattern: unknown'],
-        next: ['Manual recovery required before continuing'],
+        details: [matched ? `模式: ${matched}` : '模式: 未知'],
+        next: ['继续前需要手动恢复'],
         docsUrl
       }
       await this.sendIncidentAlert(incident,'warn')
@@ -710,7 +710,7 @@ export class Login {
       this.bot.compromisedReason = 'sign-in-blocked'
       this.startCompromisedInterval()
       await this.bot.engageGlobalStandby('sign-in-blocked', email).catch(()=>{})
-      // Open security docs for immediate guidance (best-effort)
+      // 打开安全文档以获取即时指导（尽力而为）
       await this.openDocsTab(page, docsUrl).catch(()=>{})
       return true
     } catch { return false }
@@ -727,30 +727,30 @@ export class Login {
       if (refs.length === 0) return
 
       const candidates: string[] = []
-      // Direct selectors (Microsoft variants + French spans)
+      // 直接选择器（Microsoft变体+法语span）
       const sel = '[data-testid="recoveryEmailHint"], #recoveryEmail, [id*="ProofEmail"], [id*="EmailProof"], [data-testid*="Email"], span:has(span.fui-Text)'
       const el = await page.waitForSelector(sel, { timeout: 1500 }).catch(()=>null)
       if (el) { const t = (await el.textContent()||'').trim(); if (t) candidates.push(t) }
 
-      // List items
+      // 列表项
       const li = page.locator('[role="listitem"], li')
       const liCount = await li.count().catch(()=>0)
       for (let i=0;i<liCount && i<12;i++) { const t = (await li.nth(i).textContent().catch(()=>''))?.trim()||''; if (t && /@/.test(t)) candidates.push(t) }
 
-      // XPath generic masked patterns
+      // XPath通用掩码模式
       const xp = page.locator('xpath=//*[contains(normalize-space(.), "@") and (contains(normalize-space(.), "*") or contains(normalize-space(.), "•"))]')
       const xpCount = await xp.count().catch(()=>0)
       for (let i=0;i<xpCount && i<12;i++) { const t = (await xp.nth(i).textContent().catch(()=>''))?.trim()||''; if (t && t.length<300) candidates.push(t) }
 
-      // Normalize
+      // 标准化
       const seen = new Set<string>()
       const norm = (s:string)=>s.replace(/\s+/g,' ').trim()
   const uniq = candidates.map(norm).filter(t=>t && !seen.has(t) && seen.add(t))
-      // Masked filter
+      // 掩码过滤器
       let masked = uniq.filter(t=>/@/.test(t) && /[*•]/.test(t))
 
       if (masked.length === 0) {
-        // Fallback full HTML scan
+        // 回退完整HTML扫描
         try {
           const html = await page.content()
           const generic = /[A-Za-z0-9]{1,4}[*•]{2,}[A-Za-z0-9*•._-]*@[A-Za-z0-9.-]+/g
@@ -764,14 +764,14 @@ export class Login {
       }
       if (masked.length === 0) return
 
-      // Prefer one mentioning email/adresse
+      // 优先选择提及邮箱/地址的
       const preferred = masked.find(t=>/email|courriel|adresse|mail/i.test(t)) || masked[0]!
-      // Extract the masked email: Microsoft sometimes shows only first 1 char (k*****@domain) or 2 chars (ko*****@domain).
-      // We ONLY compare (1 or 2) leading visible alphanumeric chars + full domain (case-insensitive).
-      // This avoids false positives when the displayed mask hides the 2nd char.
+      // 提取掩码邮箱：Microsoft有时只显示第一个字符（k*****@domain）或两个字符（ko*****@domain）。
+      // 我们只比较（1或2个）前导可见字母数字字符+完整域名（不区分大小写）。
+      // 这避免了显示掩码隐藏第2个字符时的误报。
       const maskRegex = /([a-zA-Z0-9]{1,2})[a-zA-Z0-9*•._-]*@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
       const m = maskRegex.exec(preferred)
-      // Fallback: try to salvage with looser pattern if first regex fails
+      // 回退：如果第一个正则表达式失败，尝试使用更宽松的模式
       const loose = !m ? /([a-zA-Z0-9])[*•][a-zA-Z0-9*•._-]*@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/.exec(preferred) : null
       const use = m || loose
       const extracted = use ? use[0] : preferred
@@ -787,10 +787,10 @@ export class Login {
         observedPrefix = (parts[0] || '').replace(/[^a-z0-9]/gi,'').slice(0,2)
       }
 
-      // Determine if any reference (recoveryEmail or accountEmail) matches observed mask logic
+      // 确定任何引用（recoveryEmail或accountEmail）是否匹配观察到的掩码逻辑
       const matchRef = refs.find(r => {
         if (r.domain !== observedDomain) return false
-        // If only one char visible, only enforce first char; if two, enforce both.
+        // 如果只显示一个字符，只强制执行第一个字符；如果显示两个，则强制执行两个。
         if (observedPrefix.length === 1) {
           return r.prefix2.startsWith(observedPrefix)
         }
@@ -803,15 +803,15 @@ export class Login {
           kind:'Recovery email mismatch',
           account: email,
           details:[
-            `MaskedShown: ${preferred}`,
-            `Extracted: ${extracted}`,
-            `Observed => ${observedPrefix || '??'}**@${observedDomain || '??'}`,
-            `Expected => ${refs.map(r=>`${r.prefix2}**@${r.domain}`).join(' OR ')}`
+            `掩码显示: ${preferred}`,
+            `已提取: ${extracted}`,
+            `观察到 => ${observedPrefix || '??'}**@${observedDomain || '??'}`,
+            `期望 => ${refs.map(r=>`${r.prefix2}**@${r.domain}`).join(' OR ')}`
           ],
           next:[
-            'Automation halted globally (standby engaged).',
-            'Verify account security & recovery email in Microsoft settings.',
-            'Update accounts.json if the change was legitimate before restart.'
+            '自动化全局暂停（备用启用）。',
+            '验证Microsoft设置中的账户安全和恢复电子邮件。',
+            '如果更改是合法的，请在重启前更新accounts.json。'
           ],
           docsUrl
         }
@@ -834,7 +834,7 @@ export class Login {
       if (await link.isVisible().catch(()=>false)) {
         await link.click().catch(()=>{})
         await this.bot.utils.wait(800)
-        this.bot.log(this.bot.isMobile,'LOGIN','Clicked "Use your password" link')
+        this.bot.log(this.bot.isMobile,'LOGIN','点击了"使用密码"链接')
       }
     } catch {/* ignore */}
   }
@@ -844,16 +844,16 @@ export class Login {
     const lines = [ `[Incident] ${incident.kind}`, `Account: ${incident.account}` ]
     if (incident.details?.length) lines.push(`Details: ${incident.details.join(' | ')}`)
     if (incident.next?.length) lines.push(`Next: ${incident.next.join(' -> ')}`)
-    if (incident.docsUrl) lines.push(`Docs: ${incident.docsUrl}`)
+    if (incident.docsUrl) lines.push(`文档: ${incident.docsUrl}`)
     const level: 'warn'|'error' = severity === 'critical' ? 'error' : 'warn'
     this.bot.log(this.bot.isMobile,'SECURITY',lines.join(' | '), level)
     try {
       const { ConclusionWebhook } = await import('../util/ConclusionWebhook')
       const fields = [
         { name: 'Account', value: incident.account },
-        ...(incident.details?.length ? [{ name: 'Details', value: incident.details.join('\n') }] : []),
-        ...(incident.next?.length ? [{ name: 'Next steps', value: incident.next.join('\n') }] : []),
-        ...(incident.docsUrl ? [{ name: 'Docs', value: incident.docsUrl }] : [])
+        ...(incident.details?.length ? [{ name: '详情', value: incident.details.join('\n') }] : []),
+        ...(incident.next?.length ? [{ name: '下一步', value: incident.next.join('\n') }] : []),
+        ...(incident.docsUrl ? [{ name: '文档', value: incident.docsUrl }] : [])
       ]
       await ConclusionWebhook(
         this.bot.config,

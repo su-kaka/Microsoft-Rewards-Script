@@ -16,7 +16,7 @@ export class Workers {
         this.jobState = new JobState(this.bot.config)
     }
 
-    // Daily Set
+    // 每日任务
     async doDailySet(page: Page, data: DashboardData) {
         const todayData = data.dailySetPromotions[this.bot.utils.getFormattedDate()]
 
@@ -29,18 +29,18 @@ export class Workers {
             })
 
         if (!activitiesUncompleted.length) {
-            this.bot.log(this.bot.isMobile, 'DAILY-SET', 'All Daily Set" items have already been completed')
+            this.bot.log(this.bot.isMobile, 'DAILY-SET', '所有"每日任务"项目已完成')
             return
         }
 
-        // Solve Activities
-        this.bot.log(this.bot.isMobile, 'DAILY-SET', 'Started solving "Daily Set" items')
+        // 解决活动
+        this.bot.log(this.bot.isMobile, 'DAILY-SET', '开始解决"每日任务"项目')
 
         await this.solveActivities(page, activitiesUncompleted)
 
-        // Mark as done to prevent duplicate work if checkpoints enabled
+        // 标记为已完成以防止重复工作（如果启用了检查点）
         if (this.bot.config.jobState?.enabled !== false) {
-            const email = this.bot.currentAccountEmail || 'unknown'
+            const email = this.bot.currentAccountEmail || '未知'
             for (const a of activitiesUncompleted) {
                 this.jobState.markDone(email, today, a.offerId)
             }
@@ -48,52 +48,52 @@ export class Workers {
 
         page = await this.bot.browser.utils.getLatestTab(page)
 
-        // Always return to the homepage if not already
+        // 如果尚未在首页则始终返回首页
         await this.bot.browser.func.goHome(page)
 
-        this.bot.log(this.bot.isMobile, 'DAILY-SET', 'All "Daily Set" items have been completed')
+        this.bot.log(this.bot.isMobile, 'DAILY-SET', '所有"每日任务"项目已完成')
 
-        // Optional: immediately run desktop search bundle
+        // 可选: 立即运行桌面搜索包
         if (!this.bot.isMobile && this.bot.config.workers.bundleDailySetWithSearch && this.bot.config.workers.doDesktopSearch) {
             try {
                 await this.bot.utils.waitRandom(1200, 2600)
                 await this.bot.activities.doSearch(page, data)
             } catch (e) {
-                this.bot.log(this.bot.isMobile, 'DAILY-SET', `Post-DailySet search failed: ${e instanceof Error ? e.message : e}`, 'warn')
+                this.bot.log(this.bot.isMobile, 'DAILY-SET', `每日任务后搜索失败: ${e instanceof Error ? e.message : e}`, 'warn')
             }
         }
     }
 
-    // Punch Card
+    // 打卡卡
     async doPunchCard(page: Page, data: DashboardData) {
 
-        const punchCardsUncompleted = data.punchCards?.filter(x => x.parentPromotion && !x.parentPromotion.complete) ?? [] // Only return uncompleted punch cards
+        const punchCardsUncompleted = data.punchCards?.filter(x => x.parentPromotion && !x.parentPromotion.complete) ?? [] // 仅返回未完成的打卡卡
 
         if (!punchCardsUncompleted.length) {
-            this.bot.log(this.bot.isMobile, 'PUNCH-CARD', 'All "Punch Cards" have already been completed')
+            this.bot.log(this.bot.isMobile, 'PUNCH-CARD', '所有"打卡卡"已完成')
             return
         }
 
         for (const punchCard of punchCardsUncompleted) {
 
-            // Ensure parentPromotion exists before proceeding
+            // 继续之前确保父推广存在
             if (!punchCard.parentPromotion?.title) {
-                this.bot.log(this.bot.isMobile, 'PUNCH-CARD', `Skipped punchcard "${punchCard.name}" | Reason: Parent promotion is missing!`, 'warn')
+                this.bot.log(this.bot.isMobile, 'PUNCH-CARD', `跳过打卡卡 "${punchCard.name}" | 原因: 缺少父推广！`, 'warn')
                 continue
             }
 
-            // Get latest page for each card
+            // 为每张卡获取最新页面
             page = await this.bot.browser.utils.getLatestTab(page)
 
-            const activitiesUncompleted = punchCard.childPromotions.filter(x => !x.complete) // Only return uncompleted activities
+            const activitiesUncompleted = punchCard.childPromotions.filter(x => !x.complete) // 仅返回未完成的活动
 
-            // Solve Activities
-            this.bot.log(this.bot.isMobile, 'PUNCH-CARD', `Started solving "Punch Card" items for punchcard: "${punchCard.parentPromotion.title}"`)
+            // 解决活动
+            this.bot.log(this.bot.isMobile, 'PUNCH-CARD', `开始解决打卡卡 "${punchCard.parentPromotion.title}" 的"打卡卡"项目`)
 
-            // Got to punch card index page in a new tab
+            // 在新选项卡中转到打卡卡索引页面
             await page.goto(punchCard.parentPromotion.destinationUrl, { referer: this.bot.config.baseURL })
 
-            // Wait for new page to load, max 10 seconds, however try regardless in case of error
+            // 等待新页面加载，最多10秒，但即使出错也尝试
             await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { })
 
             await this.solveActivities(page, activitiesUncompleted, punchCard)
@@ -108,30 +108,30 @@ export class Workers {
                 await this.bot.browser.func.goHome(page)
             }
 
-            this.bot.log(this.bot.isMobile, 'PUNCH-CARD', `All items for punchcard: "${punchCard.parentPromotion.title}" have been completed`)
+            this.bot.log(this.bot.isMobile, 'PUNCH-CARD', `打卡卡 "${punchCard.parentPromotion.title}" 的所有项目已完成`)
         }
 
-        this.bot.log(this.bot.isMobile, 'PUNCH-CARD', 'All "Punch Card" items have been completed')
+        this.bot.log(this.bot.isMobile, 'PUNCH-CARD', '所有"打卡卡"项目已完成')
     }
 
-    // More Promotions
+    // 更多推广
     async doMorePromotions(page: Page, data: DashboardData) {
         const morePromotions = data.morePromotions
 
-        // Check if there is a promotional item
-        if (data.promotionalItem) { // Convert and add the promotional item to the array
+        // 检查是否有推广项目
+        if (data.promotionalItem) { // 转换并将推广项目添加到数组
             morePromotions.push(data.promotionalItem as unknown as MorePromotion)
         }
 
         const activitiesUncompleted = morePromotions?.filter(x => !x.complete && x.pointProgressMax > 0 && x.exclusiveLockedFeatureStatus !== 'locked') ?? []
 
         if (!activitiesUncompleted.length) {
-            this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', 'All "More Promotion" items have already been completed')
+            this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', '所有"更多推广"项目已完成')
             return
         }
 
-        // Solve Activities
-        this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', 'Started solving "More Promotions" items')
+        // 解决活动
+        this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', '开始解决"更多推广"项目')
 
         page = await this.bot.browser.utils.getLatestTab(page)
 
@@ -139,13 +139,13 @@ export class Workers {
 
         page = await this.bot.browser.utils.getLatestTab(page)
 
-        // Always return to the homepage if not already
+        // 如果尚未在首页则始终返回首页
         await this.bot.browser.func.goHome(page)
 
-        this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', 'All "More Promotion" items have been completed')
+        this.bot.log(this.bot.isMobile, 'MORE-PROMOTIONS', '所有"更多推广"项目已完成')
     }
 
-    // Solve all the different types of activities
+    // 解决所有不同类型活动
     private async solveActivities(activityPage: Page, activities: PromotionalItem[] | MorePromotion[], punchCard?: PunchCard) {
         const activityInitial = activityPage.url()
         const retry = new Retry(this.bot.config.retryPolicy)
@@ -163,12 +163,12 @@ export class Workers {
                 if (typeLabel !== 'Unsupported') {
                     await this.executeActivity(activityPage, activity, selector, throttle, retry)
                 } else {
-                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `Skipped activity "${activity.title}" | Reason: Unsupported type: "${activity.promotionType}"!`, 'warn')
+                    this.bot.log(this.bot.isMobile, 'ACTIVITY', `跳过活动 "${activity.title}" | 原因: 不支持的类型: "${activity.promotionType}"!`, 'warn')
                 }
 
                 await this.applyThrottle(throttle, 1200, 2600)
             } catch (error) {
-                this.bot.log(this.bot.isMobile, 'ACTIVITY', 'An error occurred:' + error, 'error')
+                this.bot.log(this.bot.isMobile, 'ACTIVITY', '发生错误:' + error, 'error')
                 throttle.record(false)
             }
         }

@@ -10,7 +10,7 @@ import { Config, ConfigSaveFingerprint } from '../interface/Config'
 let configCache: Config
 let configSourcePath = ''
 
-// Basic JSON comment stripper (supports // line and /* block */ comments while preserving strings)
+// 基本JSON注释剥离器（支持//行和/*块*/注释同时保留字符串）
 function stripJsonComments(input: string): string {
     let out = ''
     let inString = false
@@ -36,7 +36,7 @@ function stripJsonComments(input: string): string {
         }
         if (inString) {
             out += ch
-            if (ch === '\\') { // escape next char
+            if (ch === '\\') { // 转义下一个字符
                 i++
                 if (i < input.length) out += input[i]
                 continue
@@ -67,9 +67,9 @@ function stripJsonComments(input: string): string {
     return out
 }
 
-// Normalize both legacy (flat) and new (nested) config schemas into the flat Config interface
+// 将旧版（平面）和新版（嵌套）配置模式标准化为平面Config接口
 function normalizeConfig(raw: unknown): Config {
-    // Using any here is necessary to support both legacy flat config and new nested config structures
+    // 在这里使用any是必要的，以支持旧版平面配置和新版嵌套配置结构
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const n = (raw || {}) as any
 
@@ -110,7 +110,7 @@ function normalizeConfig(raw: unknown): Config {
         doReadToEarn: true,
         bundleDailySetWithSearch: false
     }
-    // Ensure missing flag gets a default
+    // 确保缺少的标志获得默认值
     if (typeof workers.bundleDailySetWithSearch !== 'boolean') workers.bundleDailySetWithSearch = false
 
     // Logging
@@ -207,18 +207,18 @@ export function loadAccounts(): Account[] {
             }
             raw = fs.readFileSync(full, 'utf-8')
         } else {
-            // Try multiple locations to support both root mounts and dist mounts
-            // Support both .json and .jsonc extensions
+            // 尝试多个位置以支持根挂载和dist挂载
+            // 支持.json和.jsonc扩展名
             const candidates = [
-                path.join(__dirname, '../', file),               // root/accounts.json (preferred)
+                path.join(__dirname, '../', file),               // root/accounts.json (首选)
                 path.join(__dirname, '../', file + 'c'),         // root/accounts.jsonc
-                path.join(__dirname, '../src', file),            // fallback: file kept inside src/
+                path.join(__dirname, '../src', file),            // 回退：文件保留在src内部/
                 path.join(__dirname, '../src', file + 'c'),      // src/accounts.jsonc
-                path.join(process.cwd(), file),                  // cwd override
+                path.join(process.cwd(), file),                  // cwd覆盖
                 path.join(process.cwd(), file + 'c'),            // cwd/accounts.jsonc
                 path.join(process.cwd(), 'src', file),           // cwd/src/accounts.json
                 path.join(process.cwd(), 'src', file + 'c'),     // cwd/src/accounts.jsonc
-                path.join(__dirname, file),                      // dist/accounts.json (legacy)
+                path.join(__dirname, file),                      // dist/accounts.json (旧版)
                 path.join(__dirname, file + 'c')                 // dist/accounts.jsonc
             ]
             let chosen: string | null = null
@@ -229,19 +229,19 @@ export function loadAccounts(): Account[] {
             raw = fs.readFileSync(chosen, 'utf-8')
         }
 
-        // Support comments in accounts file (same as config)
+        // 在账户文件中支持注释（与配置相同）
         const cleaned = stripJsonComments(raw)
         const parsedUnknown = JSON.parse(cleaned)
-        // Accept either a root array or an object with an `accounts` array, ignore `_note`
+        // 接受根数组或带有 `accounts` 数组的对象，忽略 `_note`
         const parsed = Array.isArray(parsedUnknown) ? parsedUnknown : (parsedUnknown && typeof parsedUnknown === 'object' && Array.isArray((parsedUnknown as { accounts?: unknown }).accounts) ? (parsedUnknown as { accounts: unknown[] }).accounts : null)
         if (!Array.isArray(parsed)) throw new Error('accounts must be an array')
-        // minimal shape validation
+        // 最小形状验证
         for (const a of parsed) {
             if (!a || typeof a.email !== 'string' || typeof a.password !== 'string') {
                 throw new Error('each account must have email and password strings')
             }
         }
-        // Filter out disabled accounts (enabled: false)
+        // 过滤掉禁用的账户 (enabled: false)
         const allAccounts = parsed as Account[]
         const enabledAccounts = allAccounts.filter(acc => acc.enabled !== false)
         return enabledAccounts
@@ -258,13 +258,13 @@ export function loadConfig(): Config {
             return configCache
         }
 
-        // Resolve configuration file from common locations (supports .jsonc and .json)
+        // 从常见位置解析配置文件（支持.jsonc和.json）
         const names = ['config.jsonc', 'config.json']
         const bases = [
-            path.join(__dirname, '../'),       // dist root when compiled
-            path.join(__dirname, '../src'),    // fallback: running dist but config still in src
-            process.cwd(),                     // repo root
-            path.join(process.cwd(), 'src'),   // repo/src when running ts-node
+            path.join(__dirname, '../'),       // 编译时的dist根目录
+            path.join(__dirname, '../src'),    // 回退：运行dist但配置仍在src中
+            process.cwd(),                     // repo根目录
+            path.join(process.cwd(), 'src'),   // 运行ts-node时的repo/src
             __dirname                          // dist/util
         ]
         const candidates: string[] = []
@@ -293,7 +293,7 @@ export function loadConfig(): Config {
 
 export async function loadSessionData(sessionPath: string, email: string, isMobile: boolean, saveFingerprint: ConfigSaveFingerprint) {
     try {
-        // Fetch cookie file
+        // 获取cookie文件
         const cookieFile = path.join(__dirname, '../browser/', sessionPath, email, `${isMobile ? 'mobile_cookies' : 'desktop_cookies'}.json`)
 
         let cookies: Cookie[] = []
@@ -302,7 +302,7 @@ export async function loadSessionData(sessionPath: string, email: string, isMobi
             cookies = JSON.parse(cookiesData)
         }
 
-        // Fetch fingerprint file (support both legacy typo "fingerpint" and corrected "fingerprint")
+        // 获取指纹文件（支持旧版拼写错误"fingerpint"和正确的"fingerprint"）
         const baseDir = path.join(__dirname, '../browser/', sessionPath, email)
         const legacyFile = path.join(baseDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
         const correctFile = path.join(baseDir, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
@@ -358,7 +358,7 @@ export async function saveFingerprintData(sessionPath: string, email: string, is
             await fs.promises.mkdir(sessionDir, { recursive: true })
         }
 
-    // Save fingerprint to files (write both legacy and corrected names for compatibility)
+    // 将指纹保存到文件（为兼容性写入旧版和更正的名称）
     const legacy = path.join(sessionDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
     const correct = path.join(sessionDir, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
     const payload = JSON.stringify(fingerprint)

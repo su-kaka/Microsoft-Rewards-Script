@@ -12,7 +12,7 @@ class AxiosClient {
         this.account = account
         this.instance = axios.create()
 
-        // If a proxy configuration is provided, set up the agent
+        // 如果提供了代理配置，设置代理
         if (this.account.url && this.account.proxyAxios) {
             const agent = this.getAgentForProxy(this.account)
             this.instance.defaults.httpAgent = agent
@@ -35,7 +35,7 @@ class AxiosClient {
         }
     }
 
-    // Generic method to make any Axios request
+    // 通用方法以发出任何Axios请求
     public async request(config: AxiosRequestConfig, bypassProxy = false): Promise<AxiosResponse> {
         if (bypassProxy) {
             const bypassInstance = axios.create()
@@ -52,16 +52,16 @@ class AxiosClient {
                 lastError = err
                 const axiosErr = err as AxiosError | undefined
 
-                // Detect HTTP proxy auth failures (status 407) and retry without proxy
+                // 检测HTTP代理身份验证失败（状态407）并重试无代理
                 if (axiosErr && axiosErr.response && axiosErr.response.status === 407) {
                     if (attempt < maxAttempts) {
-                        await this.sleep(1000 * attempt) // Exponential backoff
+                        await this.sleep(1000 * attempt) // 指数退避
                     }
                     const bypassInstance = axios.create()
                     return bypassInstance.request(config)
                 }
 
-                // If proxied request fails with common proxy/network errors, retry with backoff
+                // 如果代理请求因常见代理/网络错误而失败，使用退避重试
                 const e = err as { code?: string; cause?: { code?: string }; message?: string } | undefined
                 const code = e?.code || e?.cause?.code
                 const isNetErr = code === 'ECONNREFUSED' || code === 'ETIMEDOUT' || code === 'ECONNRESET' || code === 'ENOTFOUND'
@@ -70,17 +70,17 @@ class AxiosClient {
                 
                 if (isNetErr || looksLikeProxyIssue) {
                     if (attempt < maxAttempts) {
-                        // Exponential backoff: 1s, 2s, 4s, etc.
+                        // 指数退避：1s，2s，4s等。
                         const delayMs = 1000 * Math.pow(2, attempt - 1)
                         await this.sleep(delayMs)
                         continue
                     }
-                    // Last attempt: try without proxy
+                    // 最后尝试：尝试无代理
                     const bypassInstance = axios.create()
                     return bypassInstance.request(config)
                 }
                 
-                // Non-retryable error
+                // 不可重试错误
                 throw err
             }
         }

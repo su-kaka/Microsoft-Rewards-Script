@@ -19,7 +19,7 @@
     
     "browser": {
         // false = visible window | true = headless mode (invisible)
-        "headless": false,
+        "headless": true,
         // Max timeout for operations (supports: 30000, "30s", "2min")
         "globalTimeout": "30s"
     },
@@ -87,6 +87,8 @@
         "settings": {
             // Use region-specific queries (at, fr, us, etc.)
             "useGeoLocaleQueries": true,
+            // Locale for search queries (e.g., "us", "cn", "fr")
+            "useLocale": "cn",
             // Randomly scroll search result pages (more natural behavior)
             "scrollRandomResults": true,
             // Occasionally click a result (safe targets only)
@@ -95,8 +97,8 @@
             "retryMobileSearchAmount": 2,
             // Delay between searches
             "delay": {
-                "min": "1min",
-                "max": "5min"
+                "min": "7min",
+                "max": "15min"
             }
         }
     },

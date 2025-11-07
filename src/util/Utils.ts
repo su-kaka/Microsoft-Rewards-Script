@@ -3,12 +3,12 @@ import ms from 'ms'
 export default class Util {
 
     async wait(ms: number): Promise<void> {
-        // Safety check: prevent extremely long or negative waits
-        const MAX_WAIT_MS = 3600000 // 1 hour max
+        // 安全检查：防止过长或负数等待
+        const MAX_WAIT_MS = 3600000 // 最大1小时
         const safeMs = Math.min(Math.max(0, ms), MAX_WAIT_MS)
         
         if (ms !== safeMs) {
-            console.warn(`[Utils] wait() clamped from ${ms}ms to ${safeMs}ms (max: ${MAX_WAIT_MS}ms)`)
+            console.warn(`[Utils] wait() 从 ${ms}ms 限制到 ${safeMs}ms (最大: ${MAX_WAIT_MS}ms)`)
         }
         
         return new Promise<void>((resolve) => {
@@ -24,7 +24,7 @@ export default class Util {
 
     getFormattedDate(ms = Date.now()): string {
         const today = new Date(ms)
-        const month = String(today.getMonth() + 1).padStart(2, '0')  // January is 0
+        const month = String(today.getMonth() + 1).padStart(2, '0')  // 一月是0
         const day = String(today.getDate()).padStart(2, '0')
         const year = today.getFullYear()
 
@@ -52,9 +52,9 @@ export default class Util {
     }
 
     chunkArray<T>(arr: T[], numChunks: number): T[][] {
-        // Validate input to prevent division by zero or invalid chunks
+        // 验证输入以防止除零或无效块
         if (numChunks <= 0) {
-            throw new Error(`Invalid numChunks: ${numChunks}. Must be a positive integer.`)
+            throw new Error(`无效的 numChunks: ${numChunks}。必须是正整数。`)
         }
         
         if (arr.length === 0) {
@@ -76,7 +76,7 @@ export default class Util {
     stringToMs(input: string | number): number {
         const milisec = ms(input.toString())
         if (!milisec) {
-            throw new Error('The string provided cannot be parsed to a valid time! Use a format like "1 min", "1m" or "1 minutes"')
+            throw new Error('提供的字符串无法解析为有效时间！请使用类似"1 min"、"1m"或"1 minutes"的格式')
         }
         return milisec
     }

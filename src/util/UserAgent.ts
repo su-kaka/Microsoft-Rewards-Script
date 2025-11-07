@@ -68,8 +68,8 @@ export async function getChromeVersion(isMobile: boolean): Promise<string> {
         return data.channels.Stable.version
 
     } catch (error) {
-        throw log(isMobile, 'USERAGENT-CHROME-VERSION', 'An error occurred:' + error, 'error')
-        return "138.0.7204.50"
+        log(isMobile, 'USERAGENT-CHROME-VERSION', '获取Chrome版本时出错:' + error, 'error')
+        return '138.0.7204.50'
     }
 }
 
@@ -157,7 +157,7 @@ async function fetchEdgeVersionsOnce(isMobile: boolean): Promise<EdgeVersionResu
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (compatible; rewards-bot/2.1)' // Provide UA to avoid stricter servers
+                'User-Agent': 'Mozilla/5.0 (compatible; rewards-bot/2.1)' // 提供UA以避免更严格的服务器
             },
             timeout: 10000
         })
