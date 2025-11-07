@@ -877,7 +877,7 @@ export class Login {
   private startCompromisedInterval() {
     if (this.compromisedInterval) clearInterval(this.compromisedInterval)
     this.compromisedInterval = setInterval(()=>{
-      try { this.bot.log(this.bot.isMobile,'SECURITY','Account in security standby. Review before proceeding. Security check by @Light','warn') } catch {/* ignore */}
+      try { this.bot.log(this.bot.isMobile,'SECURITY','账户处于安全待机状态。在继续之前进行审查。安全检查由 @Light 提供','warn') } catch {/* ignore */}
     }, 5*60*1000)
   }
 

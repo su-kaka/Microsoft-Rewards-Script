@@ -88,7 +88,7 @@ export class MicrosoftRewardsBot {
     }
 
     async run() {
-        log('main', 'MAIN', `机器人已启动，使用 ${this.config.clusters} 个集群`);
+        log('main', 'MAIN', `机器人已启动，使用 ${this.config.clusters} 个集群`)
 
 
 
@@ -110,7 +110,7 @@ export class MicrosoftRewardsBot {
     }
 
     private runMaster() {
-        log('main', 'MAIN-PRIMARY', '主进程已启动');
+        log('main', 'MAIN-PRIMARY', '主进程已启动')
 
         const totalAccounts = this.accounts.length
         
