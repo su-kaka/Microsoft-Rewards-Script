@@ -36,8 +36,8 @@ export class ABC extends Workers {
             await this.bot.utils.waitRandom(4000,7000)
             await page.close()
 
-            if (i === maxIterations) {
-                this.bot.log(this.bot.isMobile, 'ABC', '未能解决测验，超出最大迭代次数15', 'warn')
+            if (i === RETRY_LIMITS.ABC_MAX) {
+                this.bot.log(this.bot.isMobile, 'ABC', `Failed to solve quiz, exceeded max iterations of ${RETRY_LIMITS.ABC_MAX}`, 'warn')
             } else {
                 this.bot.log(this.bot.isMobile, 'ABC', '成功完成ABC活动')
             }

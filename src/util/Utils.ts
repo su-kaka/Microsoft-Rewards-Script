@@ -16,9 +16,10 @@ export default class Util {
         })
     }
 
-    async waitRandom(minMs: number, maxMs: number): Promise<void> {
-        const delta = this.randomNumber(minMs, maxMs)
-        return this.wait(delta)
+    async waitRandom(min_ms: number, max_ms: number, distribution: 'uniform' | 'normal' = 'uniform'): Promise<void> {
+        return new Promise<void>((resolve) => {
+            setTimeout(resolve, this.randomNumber(min_ms, max_ms, distribution))
+        })
     }
 
     getFormattedDate(ms = Date.now()): string {

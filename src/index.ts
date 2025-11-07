@@ -64,7 +64,6 @@ export class MicrosoftRewardsBot {
     private globalStandby: { active: boolean; reason?: string } = { active: false }
 
     // 添加 axios 属性
-    //@ts-expect-error Will be initialized later
     public axios!: Axios
 
     constructor(isMobile: boolean) {

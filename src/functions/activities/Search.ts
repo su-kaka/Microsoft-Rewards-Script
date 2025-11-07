@@ -171,7 +171,7 @@ export class Search extends Workers {
                         } else {
                             stagnation = 0
                         }
-                        }
+                        
 
                         missingPoints = newMissingPoints
 
@@ -190,7 +190,7 @@ export class Search extends Workers {
                 fallbackRounds++
                 }
             }
-
+        }
         // 记录日志，表明搜索完成
         this.bot.log(this.bot.isMobile, 'SEARCH-BING', '搜索完成')
     }

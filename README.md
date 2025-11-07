@@ -1,9 +1,9 @@
 # 微软奖励脚本
 自动化的微软奖励脚本，这次使用 TypeScript、Cheerio 和 Playwright 编写。
 
-该项目来源于https://github.com/TheNetsky/Microsoft-Rewards-Script
+该项目来源于https://github.com/TheNetsky/Microsoft-Rewards-Script，感谢原作者的付出
 
-本项目主要内容为原项目本地化处理，主要针对的是国内中文用户无法访问外网。并在原有基础上完善功能。若有侵权请联系我删除。
+本项目不定时同步原项目代码，主要内容为本地化处理，主要针对的是国内用户无法访问外网google等问题。并在原有基础上完善功能。若有侵权请联系我删除。
 
 本项目所有改动基于win11系统。
 其他系统未测试，请根据原项目相关配置设置。
@@ -35,7 +35,7 @@
 - 如果你在未先关闭浏览器窗口的情况下结束脚本（仅在 `headless` 为 `false` 时），会有 Chrome 进程继续占用资源。你可以使用任务管理器关闭这些进程，或者使用附带的 `pnpm kill-chrome-win` 脚本（Windows 系统）。
 - 如果你要自动化运行此脚本，请设置每天至少运行 2 次，以确保完成所有任务。将 `"runOnZeroPoints": false`，这样在没有可赚取积分时脚本不会运行。
 - 如果出现无法自动登录情况，请在代码执行登录过程中手动完成网页的登录，等待代码自动完成剩下流程。登录信息保存在sessions目录（需要多备份），后续运行根据该目录的会话文件来运行。
-- 更新代码后更新Playwright ，`npm install -D @playwright/test@latest`和`npx playwright install`
+- 更新代码后更新Playwright ，`npm install -D @playwright/test@latest`和`pnpm exec playwright install`
 
 ## 配置 ## 
 | 设置        | 描述           | 默认值  |

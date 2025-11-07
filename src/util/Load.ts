@@ -89,6 +89,7 @@ function normalizeConfig(raw: unknown): Config {
         useGeoLocaleQueries: !!(searchSettingsSrc.useGeoLocaleQueries ?? false),
         scrollRandomResults: !!(searchSettingsSrc.scrollRandomResults ?? false),
         clickRandomResults: !!(searchSettingsSrc.clickRandomResults ?? false),
+        useLocale: searchSettingsSrc.useLocale ?? 'cn',
         retryMobileSearchAmount: Number(searchSettingsSrc.retryMobileSearchAmount ?? 2),
         searchDelay: {
             min: delaySrc.min ?? '3min',

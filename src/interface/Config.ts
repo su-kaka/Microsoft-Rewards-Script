@@ -48,6 +48,7 @@ export interface ConfigSearchSettings {
     useGeoLocaleQueries: boolean;
     scrollRandomResults: boolean;
     clickRandomResults: boolean;
+    useLocale: string;
     searchDelay: ConfigSearchDelay;
     retryMobileSearchAmount: number;
     localFallbackCount?: number; // Number of local fallback queries to sample when trends fail
