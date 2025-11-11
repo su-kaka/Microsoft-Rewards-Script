@@ -32,6 +32,18 @@
 6. 按照你的喜好修改 `config.jsonc` 文件
 7. 运行 `npm run build` 构建脚本
 8. 运行 `npm start` 启动构建好的脚本
+
+## Docker运行
+1. 下载或克隆源代码
+2. 确保`config.json`内的 `headless`设置为`true`
+3. 编辑`compose.yaml` 
+* 设置时区`TZ` 
+* 设置调度`CRON_SCHEDULE` （默认为每天7点执行一次）
+* 保持`RUN_ON_START=true`
+4. 启动容器
+~~~
+docker compose up -d 
+~~~
 ## 注意事项 ##
 - 如果你在未先关闭浏览器窗口的情况下结束脚本（仅在 `headless` 为 `false` 时），会有 Chrome 进程继续占用资源。你可以使用任务管理器关闭这些进程，或者使用附带的 `npm kill-chrome-win` 脚本（Windows 系统）。
 - 如果你要自动化运行此脚本，请设置每天至少运行 2 次，以确保完成所有任务。将 `"runOnZeroPoints": false`，这样在没有可赚取积分时脚本不会运行。
