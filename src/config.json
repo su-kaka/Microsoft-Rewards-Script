@@ -4,7 +4,7 @@
     "dryRun": false,
     "browser": {
         "headless": false,
-        "globalTimeout": "30s"
+        "globalTimeout": "60s"
     },
     "fingerprinting": {
         "saveFingerprint": {
@@ -36,11 +36,12 @@
         "settings": {
             "useGeoLocaleQueries": true,
             "scrollRandomResults": true,
+            "useLocale": "cn",
             "clickRandomResults": true,
             "retryMobileSearchAmount": 2,
             "delay": {
-                "min": "2min",
-                "max": "5min"
+                "min": "7min",
+                "max": "15min"
             }
         }
     },
