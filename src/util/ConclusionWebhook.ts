@@ -29,12 +29,6 @@ interface DiscordEmbed {
     }
 }
 
-interface WebhookPayload {
-    username: string
-    avatar_url: string
-    embeds: DiscordEmbed[]
-}
-
 interface AccountSummary {
     email: string
     totalCollected: number
@@ -89,26 +83,20 @@ export async function ConclusionWebhook(
         embed.fields = fields
     }
 
-    // 如果提供了自定义webhook设置，则使用，否则回退到默认值
-    const webhookUsername = config.webhook?.username || config.conclusionWebhook?.username || 'Microsoft Rewards'
-    const webhookAvatarUrl = config.webhook?.avatarUrl || config.conclusionWebhook?.avatarUrl || DISCORD.AVATAR_URL
-
-    const payload: WebhookPayload = {
-        username: webhookUsername,
-        avatar_url: webhookAvatarUrl,
-        embeds: [embed]
-    }
-
     const postWebhook = async (url: string, label: string) => {
         const maxAttempts = 3
         let lastError: unknown = null
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                await axios.post(url, payload, {
-                    headers: { 'Content-Type': 'application/json' },
-                    timeout: 15000
-                })
+                await axios.post(url,
+                    {
+                        embeds: [embed]
+                    },
+                    {
+                        headers: { 'Content-Type': 'application/json' },
+                        timeout: 15000
+                    })
                 log('main', 'WEBHOOK', `${label} notification sent successfully (attempt ${attempt})`)
                 return
             } catch (error) {
@@ -160,7 +148,7 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
         const hours = Math.floor(totalSeconds / 3600)
         const minutes = Math.floor((totalSeconds % 3600) / 60)
         const seconds = totalSeconds % 60
-        
+
         if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`
         if (minutes > 0) return `${minutes}m ${seconds}s`
         return `${seconds}s`
@@ -199,14 +187,14 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
 
     // 构建全局统计字段
     const globalStats = [
-        `**💎 总积分赚取**`,
+        '**💎 总积分赚取**',
         `\`${data.totalInitial.toLocaleString()}\` → \`${data.totalEnd.toLocaleString()}\` **(+${data.totalCollected.toLocaleString()})**`,
         '',
-        `**📊 处理账户**`,
+        '**📊 处理账户**',
         `✅ Success: **${data.successes}** | ⚠️ Errors: **${data.accountsWithErrors}** | 🚫 Banned: **${data.accountsBanned}**`,
         `Total: **${data.totalAccounts}** ${data.totalAccounts === 1 ? 'account' : 'accounts'}`,
         '',
-        `**⚡ Performance**`,
+        '**⚡ Performance**',
         `Average: **${data.avgPointsPerAccount}pts/account** in **${formatDuration(data.avgDuration)}**`,
         `Total Runtime: **${formatDuration(data.totalDuration)}**`
     ].join('\n')
@@ -215,18 +203,18 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
     const accountFields: DiscordField[] = []
     const maxAccountsPerField = 5
     const accountChunks: AccountSummary[][] = []
-    
+
     for (let i = 0; i < data.summaries.length; i += maxAccountsPerField) {
         accountChunks.push(data.summaries.slice(i, i + maxAccountsPerField))
     }
 
     accountChunks.forEach((chunk, chunkIndex) => {
         const accountLines: string[] = []
-        
+
         chunk.forEach((acc) => {
             const statusIcon = acc.banned?.status ? '🚫' : (acc.errors.length > 0 ? '⚠️' : '✅')
             const emailShort = acc.email.length > 25 ? acc.email.substring(0, 22) + '...' : acc.email
-            
+
             accountLines.push(`${statusIcon} **${emailShort}**`)
             accountLines.push(`└ 积分: **+${acc.totalCollected}** (🖥️ ${acc.desktopCollected} • 📱 ${acc.mobileCollected})`)
             accountLines.push(`└ 持续时间: ${formatDuration(acc.durationMs)}`)
@@ -295,15 +283,6 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
         })
     }
 
-    // 使用自定义webhook设置
-    const webhookUsername = config.conclusionWebhook?.username || config.webhook?.username || 'Microsoft Rewards'
-    const webhookAvatarUrl = config.conclusionWebhook?.avatarUrl || config.webhook?.avatarUrl || DISCORD.AVATAR_URL
-
-    const payload: WebhookPayload = {
-        username: webhookUsername,
-        avatar_url: webhookAvatarUrl,
-        embeds
-    }
 
     const postWebhook = async (url: string, label: string) => {
         const maxAttempts = 3
@@ -311,7 +290,9 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                await axios.post(url, payload, {
+                await axios.post(url, {
+                    embeds: embeds
+                }, {
                     headers: { 'Content-Type': 'application/json' },
                     timeout: 15000
                 })
@@ -339,13 +320,13 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
     // 可选NTFY通知（简化摘要）
     if (config.ntfy?.enabled && config.ntfy.url && config.ntfy.topic) {
         const message = [
-            `🎯 Microsoft Rewards 摘要`,
+            '🎯 Microsoft Rewards 摘要',
             `状态: ${statusText}`,
             `积分: ${data.totalInitial} → ${data.totalEnd} (+${data.totalCollected})`,
             `账户: ${data.successes}/${data.totalAccounts} 成功`,
             `持续时间: ${formatDuration(data.totalDuration)}`
         ].join('\n')
-        
+
         const ntfyType = embedColor === DISCORD.COLOR_RED ? 'error' : embedColor === DISCORD.COLOR_ORANGE ? 'warn' : 'log'
 
         try {

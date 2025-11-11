@@ -88,11 +88,11 @@ export class Login {
 
       await page.goto('https://www.bing.com/rewards/dashboard')
       await this.disableFido(page)
-      await page.waitForLoadState('domcontentloaded').catch(()=>{})
+      await page.waitForLoadState('domcontentloaded').catch(() => { })
       await this.bot.browser.utils.reloadBadPage(page)
       await this.checkAccountLocked(page)
 
-      const already = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 8000 }).then(()=>true).catch(()=>false)
+      const already = await page.waitForSelector('html[data-role-name="RewardsPortal"]', { timeout: 8000 }).then(() => true).catch(() => false)
       if (!already) {
         await this.performLoginFlow(page, email, password)
       } else {
@@ -323,10 +323,10 @@ export class Login {
           const resend = await page.waitForSelector('button[aria-describedby="pushNotificationsTitle errorDescription"]', { timeout: 1500 }).catch(()=>null)
           if (!resend) break
           await this.bot.utils.wait(60000)
-          await resend.click().catch(()=>{})
+          await resend.click().catch(() => { })
         }
       }
-      await page.click('button[aria-describedby="confirmSendTitle"]').catch(()=>{})
+      await page.click('button[aria-describedby="confirmSendTitle"]').catch(() => { })
       await this.bot.utils.wait(1500)
       try {
         const el = await page.waitForSelector('#displaySign, div[data-testid="displaySign"]>span', { timeout: 2000 })
@@ -363,7 +363,7 @@ export class Login {
           await this.submitTotpCode(page, totpSelector)
           return
         }
-      } catch {/* ignore */}
+      } catch {/* ignore */ }
     }
 
     // 手动提示，定期页面检查
@@ -373,7 +373,7 @@ export class Login {
     // 等待用户输入时监控页面变化
     let userInput: string | null = null
     let checkInterval: NodeJS.Timeout | null = null
-    
+
     try {
       const inputPromise = new Promise<string>(res => {
         rl.question('输入2FA代码:\n', ans => {
@@ -395,11 +395,11 @@ export class Login {
             rl.close()
             userInput = 'skip' // 跳过提交的信号
           }
-        } catch {/* ignore */}
+        } catch {/* ignore */ }
       }, 2000)
 
       const code = await inputPromise
-      
+
       if (code === 'skip' || userInput === 'skip') {
         this.bot.log(this.bot.isMobile, 'LOGIN', '跳过2FA代码提交（页面已前进）')
         return
@@ -411,7 +411,7 @@ export class Login {
     } finally {
       // 确保即使发生错误也执行清理
       if (checkInterval) clearInterval(checkInterval)
-      try { rl.close() } catch {/* ignore */}
+      try { rl.close() } catch {/* ignore */ }
     }
   }
 
@@ -457,9 +457,9 @@ export class Login {
       // 使用统一选择器系统
       const submit = await this.findFirstVisibleLocator(page, Login.TOTP_SELECTORS.submit)
       if (submit) {
-        await submit.click().catch(()=>{})
+        await submit.click().catch(() => { })
       } else {
-        await page.keyboard.press('Enter').catch(()=>{})
+        await page.keyboard.press('Enter').catch(() => { })
       }
       this.bot.log(this.bot.isMobile, 'LOGIN', '自动提交TOTP')
     } catch (error) {
@@ -529,7 +529,7 @@ export class Login {
     for (const sel of selectors) {
       const loc = page.locator(sel).first()
       if (await loc.isVisible().catch(() => false)) {
-        await loc.click().catch(()=>{})
+        await loc.click().catch(() => { })
         return true
       }
     }
@@ -560,7 +560,7 @@ export class Login {
     while (Date.now() - start < timeoutMs) {
       for (const sel of selectors) {
         const loc = page.locator(sel).first()
-        if (await loc.isVisible().catch(()=>false)) {
+        if (await loc.isVisible().catch(() => false)) {
           return sel
         }
       }
@@ -588,7 +588,7 @@ export class Login {
     if (!portalSelector) {
       try {
         await this.bot.browser.func.goHome(page)
-      } catch {/* ignore fallback errors */}
+      } catch {/* ignore fallback errors */ }
 
       const fallbackSelector = await this.waitForRewardsRoot(page, 6000)
       if (!fallbackSelector) {
@@ -605,7 +605,7 @@ export class Login {
     try {
       this.bot.log(this.bot.isMobile, 'LOGIN-BING', '验证Bing认证上下文')
       await page.goto('https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F')
-      for (let i=0;i<5;i++) {
+      for (let i = 0; i < 5; i++) {
         const u = new URL(page.url())
         if (u.hostname === 'www.bing.com' && u.pathname === '/') {
           await this.bot.browser.utils.tryDismissAllMessages(page)
@@ -631,26 +631,26 @@ export class Login {
     const biometric = await page.waitForSelector(SELECTORS.biometricVideo, { timeout: 500 }).catch(()=>null)
     if (biometric) {
       const btn = await page.$(SELECTORS.passkeySecondary)
-      if (btn) { await btn.click().catch(()=>{}); did = true; this.logPasskeyOnce('video heuristic') }
+      if (btn) { await btn.click().catch(() => { }); did = true; this.logPasskeyOnce('video heuristic') }
     }
     if (!did) {
-      const titleEl = await page.waitForSelector(SELECTORS.passkeyTitle, { timeout: 500 }).catch(()=>null)
-      const secBtn = await page.waitForSelector(SELECTORS.passkeySecondary, { timeout: 500 }).catch(()=>null)
-      const primBtn = await page.waitForSelector(SELECTORS.passkeyPrimary, { timeout: 500 }).catch(()=>null)
+      const titleEl = await page.waitForSelector(SELECTORS.passkeyTitle, { timeout: 500 }).catch(() => null)
+      const secBtn = await page.waitForSelector(SELECTORS.passkeySecondary, { timeout: 500 }).catch(() => null)
+      const primBtn = await page.waitForSelector(SELECTORS.passkeyPrimary, { timeout: 500 }).catch(() => null)
       const title = (titleEl ? (await titleEl.textContent()) : '')?.trim() || ''
       const looksLike = /sign in faster|passkey|fingerprint|face|pin/i.test(title)
-      if (looksLike && secBtn) { await secBtn.click().catch(()=>{}); did = true; this.logPasskeyOnce('title heuristic '+title) }
+      if (looksLike && secBtn) { await secBtn.click().catch(() => { }); did = true; this.logPasskeyOnce('title heuristic ' + title) }
       else if (!did && secBtn && primBtn) {
-        const text = (await secBtn.textContent()||'').trim()
-        if (/skip for now/i.test(text)) { await secBtn.click().catch(()=>{}); did = true; this.logPasskeyOnce('secondary button text') }
+        const text = (await secBtn.textContent() || '').trim()
+        if (/skip for now/i.test(text)) { await secBtn.click().catch(() => { }); did = true; this.logPasskeyOnce('secondary button text') }
       }
       if (!did) {
         const textBtn = await page.locator('xpath=//button[contains(normalize-space(.),"Skip for now")]').first()
-        if (await textBtn.isVisible().catch(()=>false)) { await textBtn.click().catch(()=>{}); did = true; this.logPasskeyOnce('text fallback') }
+        if (await textBtn.isVisible().catch(() => false)) { await textBtn.click().catch(() => { }); did = true; this.logPasskeyOnce('text fallback') }
       }
       if (!did) {
         const close = await page.$('#close-button')
-        if (close) { await close.click().catch(()=>{}); did = true; this.logPasskeyOnce('close button') }
+        if (close) { await close.click().catch(() => { }); did = true; this.logPasskeyOnce('close button') }
       }
     }
 
@@ -658,7 +658,7 @@ export class Login {
     const kmsi = await page.waitForSelector(SELECTORS.kmsiVideo, { timeout: 400 }).catch(()=>null)
     if (kmsi) {
       const yes = await page.$(SELECTORS.passkeyPrimary)
-      if (yes) { await yes.click().catch(()=>{}); did = true; this.bot.log(this.bot.isMobile,'LOGIN-KMSI','Accepted KMSI prompt') }
+      if (yes) { await yes.click().catch(() => { }); did = true; this.bot.log(this.bot.isMobile, 'LOGIN-KMSI', 'Accepted KMSI prompt') }
     }
 
     if (!did && context === 'main') {
@@ -666,7 +666,7 @@ export class Login {
       const now = Date.now()
       if (this.noPromptIterations === 1 || now - this.lastNoPromptLog > 10000) {
         this.lastNoPromptLog = now
-        this.bot.log(this.bot.isMobile,'LOGIN-NO-PROMPT',`No dialogs (x${this.noPromptIterations})`)
+        this.bot.log(this.bot.isMobile, 'LOGIN-NO-PROMPT', `No dialogs (x${this.noPromptIterations})`)
         if (this.noPromptIterations > 50) this.noPromptIterations = 0
       }
     } else if (did) {
@@ -677,7 +677,7 @@ export class Login {
   private logPasskeyOnce(reason: string) {
     if (this.passkeyHandled) return
     this.passkeyHandled = true
-    this.bot.log(this.bot.isMobile,'LOGIN-PASSKEY',`Dismissed passkey prompt (${reason})`)
+    this.bot.log(this.bot.isMobile, 'LOGIN-PASSKEY', `Dismissed passkey prompt (${reason})`)
   }
 
   // --------------- Security Detection ---------------
@@ -685,11 +685,11 @@ export class Login {
     if (this.bot.compromisedModeActive && this.bot.compromisedReason === 'sign-in-blocked') return true
     try {
       let text = ''
-      for (const sel of ['[data-testid="title"]','h1','div[role="heading"]','div.text-title']) {
-        const el = await page.waitForSelector(sel, { timeout: 600 }).catch(()=>null)
+      for (const sel of ['[data-testid="title"]', 'h1', 'div[role="heading"]', 'div.text-title']) {
+        const el = await page.waitForSelector(sel, { timeout: 600 }).catch(() => null)
         if (el) {
-          const t = (await el.textContent()||'').trim()
-          if (t && t.length < 300) text += ' '+t
+          const t = (await el.textContent() || '').trim()
+          if (t && t.length < 300) text += ' ' + t
         }
       }
       const lower = text.toLowerCase()
@@ -697,55 +697,51 @@ export class Login {
       for (const p of SIGN_IN_BLOCK_PATTERNS) { if (p.re.test(lower)) { matched = p.label; break } }
       if (!matched) return false
       const email = this.bot.currentAccountEmail || 'unknown'
-      const docsUrl = this.getDocsUrl('we-cant-sign-you-in')
       const incident: SecurityIncident = {
         kind: '我们无法登录（被阻止）',
         account: email,
         details: [matched ? `模式: ${matched}` : '模式: 未知'],
-        next: ['继续前需要手动恢复'],
-        docsUrl
+        next: ['继续前需要手动恢复']
       }
-      await this.sendIncidentAlert(incident,'warn')
+      await this.sendIncidentAlert(incident, 'warn')
       this.bot.compromisedModeActive = true
       this.bot.compromisedReason = 'sign-in-blocked'
       this.startCompromisedInterval()
-      await this.bot.engageGlobalStandby('sign-in-blocked', email).catch(()=>{})
-      // 打开安全文档以获取即时指导（尽力而为）
-      await this.openDocsTab(page, docsUrl).catch(()=>{})
+      await this.bot.engageGlobalStandby('sign-in-blocked', email).catch(() => { })
       return true
     } catch { return false }
   }
 
-  private async tryRecoveryMismatchCheck(page: Page, email: string) { try { await this.detectAndHandleRecoveryMismatch(page, email) } catch {/* ignore */} }
+  private async tryRecoveryMismatchCheck(page: Page, email: string) { try { await this.detectAndHandleRecoveryMismatch(page, email) } catch {/* ignore */ } }
   private async detectAndHandleRecoveryMismatch(page: Page, email: string) {
     try {
       const recoveryEmail: string | undefined = this.bot.currentAccountRecoveryEmail
       if (!recoveryEmail || !/@/.test(recoveryEmail)) return
       const accountEmail = email
-      const parseRef = (val: string) => { const [l,d] = val.split('@'); return { local: l||'', domain:(d||'').toLowerCase(), prefix2:(l||'').slice(0,2).toLowerCase() } }
-      const refs = [parseRef(recoveryEmail), parseRef(accountEmail)].filter(r=>r.domain && r.prefix2)
+      const parseRef = (val: string) => { const [l, d] = val.split('@'); return { local: l || '', domain: (d || '').toLowerCase(), prefix2: (l || '').slice(0, 2).toLowerCase() } }
+      const refs = [parseRef(recoveryEmail), parseRef(accountEmail)].filter(r => r.domain && r.prefix2)
       if (refs.length === 0) return
 
       const candidates: string[] = []
       // 直接选择器（Microsoft变体+法语span）
       const sel = '[data-testid="recoveryEmailHint"], #recoveryEmail, [id*="ProofEmail"], [id*="EmailProof"], [data-testid*="Email"], span:has(span.fui-Text)'
-      const el = await page.waitForSelector(sel, { timeout: 1500 }).catch(()=>null)
-      if (el) { const t = (await el.textContent()||'').trim(); if (t) candidates.push(t) }
+      const el = await page.waitForSelector(sel, { timeout: 1500 }).catch(() => null)
+      if (el) { const t = (await el.textContent() || '').trim(); if (t) candidates.push(t) }
 
       // 列表项
       const li = page.locator('[role="listitem"], li')
-      const liCount = await li.count().catch(()=>0)
-      for (let i=0;i<liCount && i<12;i++) { const t = (await li.nth(i).textContent().catch(()=>''))?.trim()||''; if (t && /@/.test(t)) candidates.push(t) }
+      const liCount = await li.count().catch(() => 0)
+      for (let i = 0; i < liCount && i < 12; i++) { const t = (await li.nth(i).textContent().catch(() => ''))?.trim() || ''; if (t && /@/.test(t)) candidates.push(t) }
 
       // XPath通用掩码模式
       const xp = page.locator('xpath=//*[contains(normalize-space(.), "@") and (contains(normalize-space(.), "*") or contains(normalize-space(.), "•"))]')
-      const xpCount = await xp.count().catch(()=>0)
-      for (let i=0;i<xpCount && i<12;i++) { const t = (await xp.nth(i).textContent().catch(()=>''))?.trim()||''; if (t && t.length<300) candidates.push(t) }
+      const xpCount = await xp.count().catch(() => 0)
+      for (let i = 0; i < xpCount && i < 12; i++) { const t = (await xp.nth(i).textContent().catch(() => ''))?.trim() || ''; if (t && t.length < 300) candidates.push(t) }
 
       // 标准化
       const seen = new Set<string>()
       const norm = (s:string)=>s.replace(/\s+/g,' ').trim()
-  const uniq = candidates.map(norm).filter(t=>t && !seen.has(t) && seen.add(t))
+      const uniq = candidates.map(norm).filter(t=>t && !seen.has(t) && seen.add(t))
       // 掩码过滤器
       let masked = uniq.filter(t=>/@/.test(t) && /[*•]/.test(t))
 
@@ -758,9 +754,9 @@ export class Login {
           const found = new Set<string>()
           let m: RegExpExecArray | null
           while ((m = generic.exec(html)) !== null) found.add(m[0])
-          while ((m = frPhrase.exec(html)) !== null) { const raw = m[1]?.replace(/<[^>]+>/g,'').trim(); if (raw) found.add(raw) }
+          while ((m = frPhrase.exec(html)) !== null) { const raw = m[1]?.replace(/<[^>]+>/g, '').trim(); if (raw) found.add(raw) }
           if (found.size > 0) masked = Array.from(found)
-        } catch {/* ignore */}
+        } catch {/* ignore */ }
       }
       if (masked.length === 0) return
 
@@ -776,15 +772,15 @@ export class Login {
       const use = m || loose
       const extracted = use ? use[0] : preferred
       const extractedLower = extracted.toLowerCase()
-  let observedPrefix = ((use && use[1]) ? use[1] : '').toLowerCase()
-  let observedDomain = ((use && use[2]) ? use[2] : '').toLowerCase()
+      let observedPrefix = ((use && use[1]) ? use[1] : '').toLowerCase()
+      let observedDomain = ((use && use[2]) ? use[2] : '').toLowerCase()
       if (!observedDomain && extractedLower.includes('@')) {
         const parts = extractedLower.split('@')
         observedDomain = parts[1] || ''
       }
       if (!observedPrefix && extractedLower.includes('@')) {
         const parts = extractedLower.split('@')
-        observedPrefix = (parts[0] || '').replace(/[^a-z0-9]/gi,'').slice(0,2)
+        observedPrefix = (parts[0] || '').replace(/[^a-z0-9]/gi, '').slice(0, 2)
       }
 
       // 确定任何引用（recoveryEmail或accountEmail）是否匹配观察到的掩码逻辑
@@ -798,9 +794,8 @@ export class Login {
       })
 
       if (!matchRef) {
-        const docsUrl = this.getDocsUrl('recovery-email-mismatch')
         const incident: SecurityIncident = {
-          kind:'Recovery email mismatch',
+          kind: 'Recovery email mismatch',
           account: email,
           details:[
             `掩码显示: ${preferred}`,
@@ -812,36 +807,34 @@ export class Login {
             '自动化全局暂停（备用启用）。',
             '验证Microsoft设置中的账户安全和恢复电子邮件。',
             '如果更改是合法的，请在重启前更新accounts.json。'
-          ],
-          docsUrl
+          ]
         }
-        await this.sendIncidentAlert(incident,'critical')
+        await this.sendIncidentAlert(incident, 'critical')
         this.bot.compromisedModeActive = true
         this.bot.compromisedReason = 'recovery-mismatch'
         this.startCompromisedInterval()
-        await this.bot.engageGlobalStandby('recovery-mismatch', email).catch(()=>{})
-        await this.openDocsTab(page, docsUrl).catch(()=>{})
+        await this.bot.engageGlobalStandby('recovery-mismatch', email).catch(() => { })
       } else {
         const mode = observedPrefix.length === 1 ? 'lenient' : 'strict'
-        this.bot.log(this.bot.isMobile,'LOGIN-RECOVERY',`Recovery OK (${mode}): ${extracted} matches ${matchRef.prefix2}**@${matchRef.domain}`)
+        this.bot.log(this.bot.isMobile, 'LOGIN-RECOVERY', `Recovery OK (${mode}): ${extracted} matches ${matchRef.prefix2}**@${matchRef.domain}`)
       }
-    } catch {/* non-fatal */}
+    } catch {/* non-fatal */ }
   }
 
   private async switchToPasswordLink(page: Page) {
     try {
       const link = await page.locator('xpath=//span[@role="button" and (contains(translate(normalize-space(.),"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"use your password") or contains(translate(normalize-space(.),"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"utilisez votre mot de passe"))]').first()
-      if (await link.isVisible().catch(()=>false)) {
-        await link.click().catch(()=>{})
+      if (await link.isVisible().catch(() => false)) {
+        await link.click().catch(() => { })
         await this.bot.utils.wait(800)
         this.bot.log(this.bot.isMobile,'LOGIN','点击了"使用密码"链接')
       }
-    } catch {/* ignore */}
+    } catch {/* ignore */ }
   }
 
   // --------------- Incident Helpers ---------------
-  private async sendIncidentAlert(incident: SecurityIncident, severity: 'warn'|'critical'='warn') {
-    const lines = [ `[Incident] ${incident.kind}`, `Account: ${incident.account}` ]
+  private async sendIncidentAlert(incident: SecurityIncident, severity: 'warn' | 'critical' = 'warn') {
+    const lines = [`[Incident] ${incident.kind}`, `Account: ${incident.account}`]
     if (incident.details?.length) lines.push(`Details: ${incident.details.join(' | ')}`)
     if (incident.next?.length) lines.push(`Next: ${incident.next.join(' -> ')}`)
     if (incident.docsUrl) lines.push(`文档: ${incident.docsUrl}`)
@@ -858,20 +851,11 @@ export class Login {
       await ConclusionWebhook(
         this.bot.config,
         `🔐 ${incident.kind}`,
-        '_Security check by @Light_',
+        '_Security check',
         fields,
         severity === 'critical' ? 0xFF0000 : 0xFFAA00
       )
-    } catch {/* ignore */}
-  }
-
-  private getDocsUrl(anchor?: string) {
-    const base = process.env.DOCS_BASE?.trim() || 'https://github.com/LightZirconite/Microsoft-Rewards-Script-Private/blob/v2/docs/security.md'
-    const map: Record<string,string> = {
-      'recovery-email-mismatch':'#recovery-email-mismatch',
-      'we-cant-sign-you-in':'#we-cant-sign-you-in-blocked'
-    }
-    return anchor && map[anchor] ? `${base}${map[anchor]}` : base
+    } catch {/* ignore */ }
   }
 
   private startCompromisedInterval() {
@@ -879,15 +863,7 @@ export class Login {
     this.compromisedInterval = setInterval(()=>{
       try { this.bot.log(this.bot.isMobile,'SECURITY','账户处于安全待机状态。在继续之前进行审查。安全检查由 @Light 提供','warn') } catch {/* ignore */}
     }, 5*60*1000)
-  }
 
-
-  private async openDocsTab(page: Page, url: string) {
-    try {
-      const ctx = page.context()
-      const tab = await ctx.newPage()
-      await tab.goto(url, { waitUntil: 'domcontentloaded' })
-    } catch {/* ignore */}
   }
 
   // --------------- Infrastructure ---------------
@@ -898,6 +874,6 @@ export class Login {
         body.isFidoSupported = false
         route.continue({ postData: JSON.stringify(body) })
       } catch { route.continue() }
-    }).catch(()=>{})
+    }).catch(() => { })
   }
 }

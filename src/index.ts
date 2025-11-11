@@ -577,7 +577,7 @@ export class MicrosoftRewardsBot {
                 await ConclusionWebhook(
                     this.config,
                     '🔐 安全警报 (移动)',
-                    `**账户:** ${account.email}\n**原因:** ${reason}\n**操作:** 保持移动浏览器开启；跳过任务\n\n_安全检查由 @Light 提供_`,
+                    `**账户:** ${account.email}\n**原因:** ${reason}\n**操作:** 保持移动浏览器开启；跳过任务`,
                     undefined,
                     0xFFAA00
                 )
@@ -790,7 +790,7 @@ export class MicrosoftRewardsBot {
             await ConclusionWebhook(
                 this.config,
                 '🚨 Global Security Standby Engaged',
-                `@everyone\n\n**Account:** ${email}\n**Reason:** ${reason}\n**Action:** Pausing all further accounts. We will not proceed until this is resolved.\n\n_Security check by @Light_`,
+                `@everyone\n\n**Account:** ${email}\n**Reason:** ${reason}\n**Action:** Pausing all further accounts. We will not proceed until this is resolved.`,
                 undefined,
                 DISCORD.COLOR_RED
             )

@@ -25,79 +25,114 @@ export default class BrowserFunc {
      * @param {Page} page Playwright page
     */
     async goHome(page: Page) {
+        const navigateHome = async () => {
+            try {
+                await page.goto(this.bot.config.baseURL, {
+                    waitUntil: 'domcontentloaded',
+                    timeout: 30000
+                })
+            } catch (e: any) {
+                if (typeof e?.message === 'string' && e.message.includes('ERR_ABORTED')) {
+                    this.bot.log(this.bot.isMobile, 'GO-HOME', 'Navigation aborted, retrying...', 'warn')
+                    await this.bot.utils.wait(1500)
+                    await page.goto(this.bot.config.baseURL, {
+                        waitUntil: 'domcontentloaded',
+                        timeout: 30000
+                    })
+                } else {
+                    throw e
+                }
+            }
+        }
 
         try {
             const dashboardURL = new URL(this.bot.config.baseURL)
 
-            if (page.url() === dashboardURL.href) {
-                return
+            if (new URL(page.url()).hostname !== dashboardURL.hostname) {
+                await navigateHome()
             }
 
-            await page.goto(this.bot.config.baseURL)
+            let success = false
 
             for (let iteration = 1; iteration <= RETRY_LIMITS.GO_HOME_MAX; iteration++) {
                 await this.bot.utils.wait(TIMEOUTS.LONG)
                 await this.bot.browser.utils.tryDismissAllMessages(page)
 
                 try {
-                    // If activities are found, exit the loop (SUCCESS - account is OK)
                     await page.waitForSelector(SELECTORS.MORE_ACTIVITIES, { timeout: 1000 })
                     this.bot.log(this.bot.isMobile, 'GO-HOME', '成功访问主页')
-                    break
+                    success = true
 
-                } catch (error) {
-                    // Activities not found yet - check if it's because account is suspended
-                    // Only check suspension if we can't find activities (reduces false positives)
-                    const suspendedByHeader = await page.waitForSelector(SELECTORS.SUSPENDED_ACCOUNT, { state: 'visible', timeout: 500 }).then(() => true).catch(() => false)
-                    
+                    break
+                } catch {
+                    const suspendedByHeader = await page
+                        .waitForSelector(SELECTORS.SUSPENDED_ACCOUNT, { state: 'visible', timeout: 500 })
+                        .then(() => true)
+                        .catch(() => false)
+
                     if (suspendedByHeader) {
                         this.bot.log(this.bot.isMobile, 'GO-HOME', `通过标题选择器检测到账户暂停 (迭代 ${iteration})`, 'error')
                         throw new Error('Account has been suspended!')
                     }
-                    
-                    // Secondary check: look for suspension text in main content area only
+
                     try {
-                        const mainContent = (await page.locator('#contentContainer, #main, .main-content').first().textContent({ timeout: 500 }).catch(() => '')) || ''
+                        const mainContent =
+                            (await page
+                                .locator('#contentContainer, #main, .main-content')
+                                .first()
+                                .textContent({ timeout: 500 })
+                                .catch(() => '')) || ''
+
                         const suspensionPatterns = [
                             /account\s+has\s+been\s+suspended/i,
                             /suspended\s+due\s+to\s+unusual\s+activity/i,
                             /your\s+account\s+is\s+temporarily\s+suspended/i
                         ]
-                        
-                        const isSuspended = suspensionPatterns.some(pattern => pattern.test(mainContent))
+
+                        const isSuspended = suspensionPatterns.some((p) => p.test(mainContent))
                         if (isSuspended) {
                             this.bot.log(this.bot.isMobile, 'GO-HOME', `通过内容文本检测到账户暂停 (迭代 ${iteration})`, 'error')
-                            throw new Error('Account has been suspended!')
+                            throw new Error('账户已被暂停！')
                         }
                     } catch (e) {
                         // 忽略文本检查中的错误 - 不关键
-                        this.bot.log(this.bot.isMobile, 'GO-HOME', `跳过暂停文本检查: ${e}`, 'warn')
+                        this.bot.log(this.bot.isMobile, 'GO-HOME', `跳过暂停文本检查: ${e instanceof Error ? e.message : String(e)}`, 'warn')
                     }
-                    
-                    // 未暂停，只是活动尚未加载 - 继续到下一次迭代
-                    this.bot.log(this.bot.isMobile, 'GO-HOME', `活动尚未找到 (迭代 ${iteration}/${RETRY_LIMITS.GO_HOME_MAX})，重试中...`, 'warn')
+
+                    const currentURL = new URL(page.url())
+                    if (currentURL.hostname !== dashboardURL.hostname) {
+                        await this.bot.browser.utils.tryDismissAllMessages(page)
+                        await this.bot.utils.waitRandom(2000,5000, 'normal')
+                        try {
+                            await navigateHome()
+                        } catch (e: any) {
+                            if (typeof e?.message === 'string' && e.message.includes('ERR_ABORTED')) {
+                                this.bot.log(this.bot.isMobile, 'GO-HOME', '导航再次中止；继续进行...', 'warn')
+                            } else {
+                                throw e
+                            }
+                        }
+                    } else {
+                        this.bot.log(
+                            this.bot.isMobile,
+                            'GO-HOME',
+                            `Activities not found yet (iteration ${iteration}/${RETRY_LIMITS.GO_HOME_MAX}), retrying...`,
+                            'warn'
+                        )
+                    }
                 }
-
-                // Below runs if the homepage was unable to be visited
-                const currentURL = new URL(page.url())
-
-                if (currentURL.hostname !== dashboardURL.hostname) {
-                    await this.bot.browser.utils.tryDismissAllMessages(page)
-
-                    await this.bot.utils.waitRandom(2000,5000, 'normal')
-                    await page.goto(this.bot.config.baseURL)
-                } else {
-                    this.bot.log(this.bot.isMobile, '返回主页', '成功访问主页')
-                    break
-                }
-
-                await this.bot.utils.waitRandom(5000,9000, 'normal')
+                const backoff = Math.min(TIMEOUTS.VERY_LONG, 1000 + iteration * 500)
+                await this.bot.utils.wait(backoff)
             }
 
+            if (!success) {
+                throw new Error('Failed to reach homepage or find activities within retry limit')
+            }
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, '返回主页', '发生错误:' + error, 'error')
+            throw this.bot.log(this.bot.isMobile, '返回主页', '发生错误:' +  (error instanceof Error ? ` ${error.message}` : ` ${String(error)}`), 'error')
         }
     }
+
 
     /**
      * Fetch user dashboard data
@@ -114,7 +149,7 @@ export default class BrowserFunc {
                 this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', '提供的页面不是仪表盘页面，正在重定向到仪表盘页面')
                 await this.goHome(target)
             }
-                let lastError: unknown = null
+            let lastError: unknown = null
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     // Reload the page to get new data
@@ -131,7 +166,7 @@ export default class BrowserFunc {
                             this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '页面似乎已关闭；尝试一次导航回退', 'warn')
                             try {
                                 await this.goHome(target)
-                            } catch {/* ignore */}
+                            } catch {/* ignore */ }
                         } else {
                             break
                         }
@@ -143,7 +178,7 @@ export default class BrowserFunc {
 
             // Wait a bit longer for scripts to load, especially on mobile
             await this.bot.utils.wait(this.bot.isMobile ? TIMEOUTS.LONG : TIMEOUTS.MEDIUM)
-            
+
             // Wait for the more-activities element to ensure page is fully loaded
             await target.waitForSelector(SELECTORS.MORE_ACTIVITIES, { timeout: TIMEOUTS.DASHBOARD_WAIT }).catch(() => {
                 this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '未找到活动元素，仍然继续', 'warn')
@@ -157,7 +192,7 @@ export default class BrowserFunc {
             })
 
             if (!scriptContent) {
-                this.bot.log(this.bot.isMobile, '获取仪表盘数据', '首次脚本中未找到仪表盘数据', 'warn')
+                this.bot.log(this.bot.isMobile, '获取仪表盘数据', '首次尝试未找到仪表盘脚本，正在尝试恢复。', 'warn')
                 
                 // 在硬失败之前强制导航重试一次
                 try {
@@ -169,13 +204,13 @@ export default class BrowserFunc {
                 } catch (e) {
                     this.bot.log(this.bot.isMobile, '获取仪表盘数据', `导航重试失败: ${e}`, 'warn')
                 }
-                
+
                 const retryContent = await target.evaluate(() => {
                     const scripts = Array.from(document.querySelectorAll('script'))
                     const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
                     return targetScript?.innerText ? targetScript.innerText : null
-                }).catch(()=>null)
-                
+                }).catch(() => null)
+
                 if (!retryContent) {
                     // 记录额外的调试信息
                     const scriptsDebug = await target.evaluate(() => {
@@ -471,10 +506,10 @@ export default class BrowserFunc {
             const html = await page.content()
             const $ = load(html)
 
-                const element = $('.offer-cta').toArray().find((x: unknown) => {
-                    const el = x as { attribs?: { href?: string } }
-                    return !!el.attribs?.href?.includes(activity.offerId)
-                })
+            const element = $('.offer-cta').toArray().find((x: unknown) => {
+                const el = x as { attribs?: { href?: string } }
+                return !!el.attribs?.href?.includes(activity.offerId)
+            })
             if (element) {
                 selector = `a[href*="${element.attribs.href}"]`
             }

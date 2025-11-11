@@ -10,62 +10,6 @@ import { Config, ConfigSaveFingerprint } from '../interface/Config'
 let configCache: Config
 let configSourcePath = ''
 
-// 基本JSON注释剥离器（支持//行和/*块*/注释同时保留字符串）
-function stripJsonComments(input: string): string {
-    let out = ''
-    let inString = false
-    let stringChar = ''
-    let inLine = false
-    let inBlock = false
-    for (let i = 0; i < input.length; i++) {
-        const ch = input[i]!
-        const next = input[i + 1]
-        if (inLine) {
-            if (ch === '\n' || ch === '\r') {
-                inLine = false
-                out += ch
-            }
-            continue
-        }
-        if (inBlock) {
-            if (ch === '*' && next === '/') {
-                inBlock = false
-                i++
-            }
-            continue
-        }
-        if (inString) {
-            out += ch
-            if (ch === '\\') { // 转义下一个字符
-                i++
-                if (i < input.length) out += input[i]
-                continue
-            }
-            if (ch === stringChar) {
-                inString = false
-            }
-            continue
-        }
-        if (ch === '"' || ch === '\'') {
-            inString = true
-            stringChar = ch
-            out += ch
-            continue
-        }
-        if (ch === '/' && next === '/') {
-            inLine = true
-            i++
-            continue
-        }
-        if (ch === '/' && next === '*') {
-            inBlock = true
-            i++
-            continue
-        }
-        out += ch
-    }
-    return out
-}
 
 // 将旧版（平面）和新版（嵌套）配置模式标准化为平面Config接口
 function normalizeConfig(raw: unknown): Config {
@@ -79,7 +23,6 @@ function normalizeConfig(raw: unknown): Config {
     const parallel = n.execution?.parallel ?? n.parallel ?? false
     const runOnZeroPoints = n.execution?.runOnZeroPoints ?? n.runOnZeroPoints ?? false
     const clusters = n.execution?.clusters ?? n.clusters ?? 1
-    const passesPerRun = n.execution?.passesPerRun ?? n.passesPerRun
 
     // Search
     const useLocalQueries = n.search?.useLocalQueries ?? n.searchOnBingLocalQueries ?? false
@@ -167,17 +110,16 @@ function normalizeConfig(raw: unknown): Config {
         searchOnBingLocalQueries: !!useLocalQueries,
         globalTimeout,
         searchSettings,
-    humanization: n.humanization,
+        humanization: n.humanization,
         retryPolicy: n.retryPolicy,
         jobState: n.jobState,
         logExcludeFunc,
         webhookLogExcludeFunc,
-    logging, // retain full logging object for live webhook usage
-    proxy: n.proxy ?? { proxyGoogleTrends: true, proxyBingTerms: true },
+        logging, // retain full logging object for live webhook usage
+        proxy: n.proxy ?? { proxyGoogleTrends: true, proxyBingTerms: true },
         webhook,
         conclusionWebhook,
         ntfy,
-    passesPerRun: passesPerRun,
         vacation: n.vacation,
         crashRecovery: n.crashRecovery || {}
     }
@@ -197,42 +139,36 @@ export function loadAccounts(): Account[] {
         const envJson = process.env.ACCOUNTS_JSON
         const envFile = process.env.ACCOUNTS_FILE
 
-        let raw: string | undefined
+        let json: string | undefined
         if (envJson && envJson.trim().startsWith('[')) {
-            raw = envJson
+            json = envJson
         } else if (envFile && envFile.trim()) {
             const full = path.isAbsolute(envFile) ? envFile : path.join(process.cwd(), envFile)
             if (!fs.existsSync(full)) {
                 throw new Error(`ACCOUNTS_FILE not found: ${full}`)
             }
-            raw = fs.readFileSync(full, 'utf-8')
+            json = fs.readFileSync(full, 'utf-8')
         } else {
-            // 尝试多个位置以支持根挂载和dist挂载
-            // 支持.json和.jsonc扩展名
+            // Try multiple locations to support both root mounts and dist mounts
+            // Support both .json and .json extensions
             const candidates = [
-                path.join(__dirname, '../', file),               // root/accounts.json (首选)
-                path.join(__dirname, '../', file + 'c'),         // root/accounts.jsonc
-                path.join(__dirname, '../src', file),            // 回退：文件保留在src内部/
-                path.join(__dirname, '../src', file + 'c'),      // src/accounts.jsonc
-                path.join(process.cwd(), file),                  // cwd覆盖
-                path.join(process.cwd(), file + 'c'),            // cwd/accounts.jsonc
-                path.join(process.cwd(), 'src', file),           // cwd/src/accounts.json
-                path.join(process.cwd(), 'src', file + 'c'),     // cwd/src/accounts.jsonc
-                path.join(__dirname, file),                      // dist/accounts.json (旧版)
-                path.join(__dirname, file + 'c')                 // dist/accounts.jsonc
+                path.join(__dirname, '../', file),
+                path.join(__dirname, '../src', file),
+                path.join(process.cwd(), file),
+                path.join(process.cwd(), 'src', file),
+                path.join(__dirname, file)
             ]
             let chosen: string | null = null
             for (const p of candidates) {
                 try { if (fs.existsSync(p)) { chosen = p; break } } catch { /* ignore */ }
             }
             if (!chosen) throw new Error(`accounts file not found in: ${candidates.join(' | ')}`)
-            raw = fs.readFileSync(chosen, 'utf-8')
+            json = fs.readFileSync(chosen, 'utf-8')
         }
 
-        // 在账户文件中支持注释（与配置相同）
-        const cleaned = stripJsonComments(raw)
-        const parsedUnknown = JSON.parse(cleaned)
-        // 接受根数组或带有 `accounts` 数组的对象，忽略 `_note`
+        // Support comments in accounts file (same as config)
+        const parsedUnknown = JSON.parse(json)
+        // Accept either a root array or an object with an `accounts` array, ignore `_note`
         const parsed = Array.isArray(parsedUnknown) ? parsedUnknown : (parsedUnknown && typeof parsedUnknown === 'object' && Array.isArray((parsedUnknown as { accounts?: unknown }).accounts) ? (parsedUnknown as { accounts: unknown[] }).accounts : null)
         if (!Array.isArray(parsed)) throw new Error('accounts must be an array')
         // 最小形状验证
@@ -258,8 +194,8 @@ export function loadConfig(): Config {
             return configCache
         }
 
-        // 从常见位置解析配置文件（支持.jsonc和.json）
-        const names = ['config.jsonc', 'config.json']
+        // Resolve configuration file from common locations
+        const names = ['config.json']
         const bases = [
             path.join(__dirname, '../'),       // 编译时的dist根目录
             path.join(__dirname, '../src'),    // 回退：运行dist但配置仍在src中
@@ -273,19 +209,19 @@ export function loadConfig(): Config {
                 candidates.push(path.join(base, name))
             }
         }
-    let cfgPath: string | null = null
+        let cfgPath: string | null = null
         for (const p of candidates) {
             try { if (fs.existsSync(p)) { cfgPath = p; break } } catch { /* ignore */ }
         }
         if (!cfgPath) throw new Error(`config.json not found in: ${candidates.join(' | ')}`)
         const config = fs.readFileSync(cfgPath, 'utf-8')
-        const text = config.replace(/^\uFEFF/, '')
-        const raw = JSON.parse(stripJsonComments(text))
-    const normalized = normalizeConfig(raw)
-    configCache = normalized // Set as cache
-    configSourcePath = cfgPath
+        const json = config.replace(/^\uFEFF/, '')
+        const raw = JSON.parse(json)
+        const normalized = normalizeConfig(raw)
+        configCache = normalized // Set as cache
+        configSourcePath = cfgPath
 
-    return normalized
+        return normalized
     } catch (error) {
         throw new Error(error as string)
     }
@@ -358,12 +294,12 @@ export async function saveFingerprintData(sessionPath: string, email: string, is
             await fs.promises.mkdir(sessionDir, { recursive: true })
         }
 
-    // 将指纹保存到文件（为兼容性写入旧版和更正的名称）
-    const legacy = path.join(sessionDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
-    const correct = path.join(sessionDir, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
-    const payload = JSON.stringify(fingerprint)
-    await fs.promises.writeFile(correct, payload)
-    try { await fs.promises.writeFile(legacy, payload) } catch { /* ignore */ }
+        // 将指纹保存到文件（为兼容性写入旧版和更正的名称）
+        const legacy = path.join(sessionDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
+        const correct = path.join(sessionDir, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
+        const payload = JSON.stringify(fingerprint)
+        await fs.promises.writeFile(correct, payload)
+        try { await fs.promises.writeFile(legacy, payload) } catch { /* ignore */ }
 
         return sessionDir
     } catch (error) {
