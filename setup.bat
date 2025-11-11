@@ -42,26 +42,26 @@ if %ERRORLEVEL% neq 0 (
 )
 
 :: 检查pnpm是否已安装
-where pnpm >nul 2>nul
+where npm >nul 2>nul
 if %ERRORLEVEL% neq 0 (
     echo npm更新...
     call npm install -g npm
-    echo pnpm未安装，正在安装...
-    call npm install -g pnpm
+    echo npm未安装，正在安装...
+
     if %ERRORLEVEL% neq 0 (
-        echo 安装pnpm失败，请检查网络连接或手动安装。
+        echo 安装npm失败，请检查网络连接或手动安装。
         pause
         exit /b 1
     )
 ) else (
-    echo pnpm已安装
+    echo npm已安装
 )
 
 echo.
 
 :: 安装项目依赖
 echo 正在安装项目依赖...
-call pnpm i
+call npm install
 if %ERRORLEVEL% neq 0 (
     echo 安装依赖失败，请检查网络连接或手动安装。
     pause
@@ -70,7 +70,8 @@ if %ERRORLEVEL% neq 0 (
 
 :: 安装Playwright
 echo 正在安装Playwright...
-call pnpm exec playwright install msedge
+call npm exec playwright install chromium
+call npm exec playwright install msedge
 if %ERRORLEVEL% neq 0 (
     echo 安装Playwright失败，请检查网络连接或手动安装。
     pause
@@ -78,13 +79,13 @@ if %ERRORLEVEL% neq 0 (
 )
 
 :: 检查并准备账户配置文件
-if not exist "src\accounts.json" (
-    if exist "src\accounts.example.json" (
+if not exist "src\accounts.jsonc" (
+    if exist "src\accounts.example.jsonc" (
         echo 正在创建账户配置文件...
-        copy "src\accounts.example.json" "src\accounts.json"
-        echo 已创建accounts.json文件，请在运行脚本前编辑此文件添加您的账户信息。
+        copy "src\accounts.example.jsonc" "src\accounts.jsonc"
+        echo 已创建accounts.jsonc文件，请在运行脚本前编辑此文件添加您的账户信息。
     ) else (
-        echo 警告：未找到accounts.example.json文件，请手动创建accounts.json文件。
+        echo 警告：未找到accounts.example.jsonc文件，请手动创建accounts.jsonc文件。
     )
 ) else (
     echo accounts.json文件已存在。
@@ -92,7 +93,7 @@ if not exist "src\accounts.json" (
 
 :: 构建项目
 echo 正在构建项目...
-call pnpm build
+call npm run build
 if %ERRORLEVEL% neq 0 (
     echo 构建项目失败，请检查错误信息。
     pause
@@ -100,19 +101,19 @@ if %ERRORLEVEL% neq 0 (
 )
 
 :: 检查配置文件
-if exist "dist\config.json" (
+if exist "dist\config.jsonc" (
     echo config.json文件已存在，请确保已按照您的喜好进行了配置。
 ) else (
-    echo 警告：未找到config.json文件，请确保该文件存在并已正确配置。
+    echo 警告：未找到config.jsonc文件，请确保该文件存在并已正确配置。
 )
 
 echo.
 echo ===================================
 echo 安装完成！
 echo 后续步骤：
-echo 1. dist\accounts.json文件添加您的账户信息
-echo 2. 检查并按需修改dist\config.json配置文件
-echo 3. 执行终端命令：pnpm start，或运行脚本：run.bat
+echo 1. dist\accounts.jsonc文件添加您的账户信息
+echo 2. 检查并按需修改dist\config.jsonc配置文件
+echo 3. 执行终端命令：npm start，或运行脚本：run.bat
 echo ===================================
 
 pause

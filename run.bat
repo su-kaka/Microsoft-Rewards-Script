@@ -2,4 +2,4 @@
 :: 更改下方目录为项目目??
 %~d0
 cd %~dp0
-call pnpm start
+call npm start

@@ -3,7 +3,7 @@
 
 该项目来源于https://github.com/TheNetsky/Microsoft-Rewards-Script ，感谢原作者的付出
 
-本项目不定时同步原项目代码，主要内容为本地化处理，主要针对的是国内用户无法访问外网google等问题。并在原有基础上完善功能。若有侵权请联系我删除。
+本项目不定时同步原项目代码，主要内容为本地化处理，主要针对的是国内用户无法访问外网google等问题，并在原有基础上完善功能。若有侵权请联系我删除。
 
 本项目所有改动基于win11系统。
 其他系统未测试，请根据原项目相关配置设置。
@@ -15,27 +15,29 @@
 3. 优化大量随机性，优化模拟人类操作-2025年7月3日
 4. 允许useLocale设置自定义地区-2025年7月10日
 5. 添加了日志本地保存功能-2025年7月26日
+6. 由于pnpm依赖导致无法编译问题，项目暂时改回使用npm管理-2025年11月11日
 
 ## 如何自动设置（二选一/自动） ##
 1. 下载或克隆源代码
 2. win系统运行setup.bat部署环境（若使用setup.bat报错，请参考手动设置）
-3. 在dist目录 `accounts.json`添加你的账户信息
-4. 按照你的喜好修改dist目录 `config.json` 文件
-5. 运行 `pnpm start`或运行 `run.bat` 启动构建好的脚本
+3. 在dist目录 `accounts.jsonc`添加你的账户信息
+4. 按照你的喜好修改dist目录 `config.jsonc` 文件
+5. 运行 `npm start`或运行 `run.bat` 启动构建好的脚本
 ## 如何手工设置（二选一/手动） ##
 1. 下载或克隆源代码
 2. 下载安装nodejs和pnpm环境
-3. 运行 `pnpm i` 安装依赖包
-4. 若Error: browserType.launch: Executable doesn't exist报错执行 pnpm exec playwright install msedge
-5. 将 `accounts.example.json` 重命名为 `accounts.json`，并添加你的账户信息
-6. 按照你的喜好修改 `config.json` 文件
-7. 运行 `pnpm build` 构建脚本
-8. 运行 `pnpm start` 启动构建好的脚本
+3. 运行 `npm install` 安装依赖包
+4. 若Error: browserType.launch: Executable doesn't exist报错执行 npm exec playwright install msedge
+5. 将 `accounts.example.jsonc` 重命名为 `accounts.jsonc`，并添加你的账户信息
+6. 按照你的喜好修改 `config.jsonc` 文件
+7. 运行 `npm run build` 构建脚本
+8. 运行 `npm start` 启动构建好的脚本
 ## 注意事项 ##
-- 如果你在未先关闭浏览器窗口的情况下结束脚本（仅在 `headless` 为 `false` 时），会有 Chrome 进程继续占用资源。你可以使用任务管理器关闭这些进程，或者使用附带的 `pnpm kill-chrome-win` 脚本（Windows 系统）。
+- 如果你在未先关闭浏览器窗口的情况下结束脚本（仅在 `headless` 为 `false` 时），会有 Chrome 进程继续占用资源。你可以使用任务管理器关闭这些进程，或者使用附带的 `npm kill-chrome-win` 脚本（Windows 系统）。
 - 如果你要自动化运行此脚本，请设置每天至少运行 2 次，以确保完成所有任务。将 `"runOnZeroPoints": false`，这样在没有可赚取积分时脚本不会运行。
 - 如果出现无法自动登录情况，请在代码执行登录过程中手动完成网页的登录，等待代码自动完成剩下流程。登录信息保存在sessions目录（需要多备份），后续运行根据该目录的会话文件来运行。
-- 更新代码后更新Playwright ，`pnpm install playwright`和`pnpm exec playwright install`
+- 更新代码后，若出现错误，请先更新依赖包，`npm install`和`npm exec playwright install`
+- 若出现其他错误，请检查代码是否有语法错误，或联系作者。
 
 ## 配置 ## 
 | 设置        | 描述           | 默认值  |
@@ -55,7 +57,7 @@
 |  workers.doMobileSearch    | 是否完成每日移动设备搜索任务 | `true`  |
 |  workers.doDailyCheckIn    | 是否完成每日签到任务 | `true`  |
 |  workers.doReadToEarn    | 是否完成阅读赚取积分任务 | `true`  |
-|  searchOnBingLocalQueries    | 是否使用 `queries.json` 文件或从本仓库获取的查询来完成“在 Bing 上搜索”任务 | `false` （从本仓库获取）   |
+|  searchOnBingLocalQueries    | 是否使用 `queries.jsonc` 文件或从本仓库获取的查询来完成“在 Bing 上搜索”任务 | `false` （从本仓库获取）   |
 |  globalTimeout    | 操作超时时间 | `30s`   |
 |  searchSettings.useGeoLocaleQueries    | 是否根据你的地理位置生成搜索查询 | `false` （使用中文生成的查询）  |
 |  searchSettings.useLocale    | 设置的地区 | `cn`  |
