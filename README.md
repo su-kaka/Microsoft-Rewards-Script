@@ -25,7 +25,7 @@
 5. 运行 `npm start`或运行 `run.bat` 启动构建好的脚本
 ## 如何手工设置（二选一/手动） ##
 1. 下载或克隆源代码
-2. 下载安装nodejs和pnpm环境
+2. 下载安装nodejs和npm环境
 3. 运行 `npm install` 安装依赖包
 4. 若Error: browserType.launch: Executable doesn't exist报错执行 npm exec playwright install msedge
 5. 将 `accounts.example.jsonc` 重命名为 `accounts.jsonc`，并添加你的账户信息
