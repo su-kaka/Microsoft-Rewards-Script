@@ -61,7 +61,7 @@ function writeLogToFile(logContent: string): void {
         
         fs.appendFileSync(logFilePath, logEntry, 'utf8')
     } catch (error) {
-        console.error('Failed to write log to file:', error)
+        console.error('[Logger] 写入日志文件失败:', error)
     }
 }
 
@@ -187,14 +187,14 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
     // Define conditions for sending to NTFY 
     const ntfyConditions = {
         log: [
-            message.toLowerCase().includes('started tasks for account'),
-            message.toLowerCase().includes('press the number'),
-            message.toLowerCase().includes('no points to earn')
+            message.toLowerCase().includes('已为账户启动任务'),
+            message.toLowerCase().includes('请按数字'),
+            message.toLowerCase().includes('没有可获得的积分')
         ],
         error: [],
         warn: [
-            message.toLowerCase().includes('aborting'),
-            message.toLowerCase().includes('didn\'t gain')
+            message.toLowerCase().includes('已中止任务'),
+            message.toLowerCase().includes('没有获得积分')
         ]
     }
 
@@ -278,7 +278,7 @@ export function log(isMobile: boolean | 'main', title: string, message: string, 
             enqueueWebhookLog(liveUrl, cleanStr)
         }
     } catch (error) {
-        console.error('[Logger] Failed to enqueue webhook log:', error)
+        console.error('[Logger] 发送实时日志到Webhook失败:', error)
     }
 
     // 记录错误时返回一个Error，以便调用者可以 `throw log(...)`

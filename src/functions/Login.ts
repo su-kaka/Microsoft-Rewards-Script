@@ -658,7 +658,7 @@ export class Login {
     const kmsi = await page.waitForSelector(SELECTORS.kmsiVideo, { timeout: 400 }).catch(()=>null)
     if (kmsi) {
       const yes = await page.$(SELECTORS.passkeyPrimary)
-      if (yes) { await yes.click().catch(() => { }); did = true; this.bot.log(this.bot.isMobile, 'LOGIN-KMSI', 'Accepted KMSI prompt') }
+      if (yes) { await yes.click().catch(() => { }); did = true; this.bot.log(this.bot.isMobile, 'LOGIN-KMSI', '已接受KMSI提示') }
     }
 
     if (!did && context === 'main') {
@@ -677,7 +677,7 @@ export class Login {
   private logPasskeyOnce(reason: string) {
     if (this.passkeyHandled) return
     this.passkeyHandled = true
-    this.bot.log(this.bot.isMobile, 'LOGIN-PASSKEY', `Dismissed passkey prompt (${reason})`)
+    this.bot.log(this.bot.isMobile, 'LOGIN-PASSKEY', `已驳回Passkey提示（${reason}）`)
   }
 
   // --------------- Security Detection ---------------

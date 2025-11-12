@@ -84,7 +84,7 @@ export async function getEdgeVersions(isMobile: boolean) {
             return await edgeVersionInFlight
         } catch (error) {
             if (edgeVersionCache) {
-                log(isMobile, 'USERAGENT-EDGE-VERSION', 'Using cached Edge versions after in-flight failure: ' + formatEdgeError(error), 'warn')
+                log(isMobile, 'USERAGENT-EDGE-VERSION', '使用缓存的Edge版本，获取失败: ' + formatEdgeError(error), 'warn')
                 return edgeVersionCache.data
             }
             throw error
@@ -100,10 +100,10 @@ export async function getEdgeVersions(isMobile: boolean) {
         .catch(error => {
             edgeVersionInFlight = null
             if (edgeVersionCache) {
-                log(isMobile, 'USERAGENT-EDGE-VERSION', 'Falling back to cached Edge versions: ' + formatEdgeError(error), 'warn')
+                log(isMobile, 'USERAGENT-EDGE-VERSION', '使用缓存的Edge版本，获取失败: ' + formatEdgeError(error), 'warn')
                 return edgeVersionCache.data
             }
-            throw log(isMobile, 'USERAGENT-EDGE-VERSION', 'Failed to fetch Edge versions: ' + formatEdgeError(error), 'error')
+            throw log(isMobile, 'USERAGENT-EDGE-VERSION', '获取Edge版本时出错: ' + formatEdgeError(error), 'error')
         })
 
     edgeVersionInFlight = fetchPromise
@@ -144,7 +144,7 @@ async function fetchEdgeVersionsWithRetry(isMobile: boolean): Promise<EdgeVersio
     return retry.run(async () => {
         const versions = await fetchEdgeVersionsOnce(isMobile)
         if (!versions.android && !versions.windows) {
-            throw new Error('Stable Edge releases did not include Android or Windows versions')
+            throw new Error('[UserAgent] Stable Edge发布未包含Android或Windows版本')
         }
         return versions
     }, () => true)
@@ -166,7 +166,7 @@ async function fetchEdgeVersionsOnce(isMobile: boolean): Promise<EdgeVersionResu
     } catch (primaryError) {
         const fallback = await tryNativeFetchFallback(isMobile)
         if (fallback) {
-            log(isMobile, 'USERAGENT-EDGE-VERSION', 'Axios failed, native fetch succeeded: ' + formatEdgeError(primaryError), 'warn')
+            log(isMobile, 'USERAGENT-EDGE-VERSION', 'Axios请求失败，使用原生Fetch成功: ' + formatEdgeError(primaryError), 'warn')
             return fallback
         }
         throw primaryError
@@ -194,7 +194,7 @@ async function tryNativeFetchFallback(isMobile: boolean): Promise<EdgeVersionRes
         return mapEdgeVersions(data)
     } catch (error) {
         if (timeoutHandle) clearTimeout(timeoutHandle)
-        log(isMobile, 'USERAGENT-EDGE-VERSION', 'Native fetch fallback failed: ' + formatEdgeError(error), 'warn')
+        log(isMobile, 'USERAGENT-EDGE-VERSION', '使用原生Fetch获取Edge版本失败: ' + formatEdgeError(error), 'warn')
         return null
     }
 }
@@ -203,7 +203,7 @@ function mapEdgeVersions(data: EdgeVersion[]): EdgeVersionResult {
     const stable = data.find(entry => entry.Product.toLowerCase() === 'stable')
         ?? data.find(entry => /stable/i.test(entry.Product))
     if (!stable) {
-        throw new Error('Stable Edge channel not found in response payload')
+        throw new Error('[UserAgent] Stable Edge渠道未在响应负载中找到')
     }
 
     const androidRelease = stable.Releases.find(release => release.Platform === Platform.Android)

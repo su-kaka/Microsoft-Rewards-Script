@@ -65,13 +65,13 @@ export function generateTOTP(
   const hash = hmac(hmacAlg, key, counterBuffer)
   if (!hash || hash.length < 20) {
     // 最小健全性检查；对于SHA1长度为20
-    throw new Error('Invalid HMAC output for TOTP')
+    throw new Error('[Totp] 无效的HMAC输出长度')
   }
 
   // 动态截断
   const offset = hash[hash.length - 1]! & 0x0f
   if (offset + 3 >= hash.length) {
-    throw new Error('Invalid dynamic truncation offset')
+    throw new Error('[Totp] 无效的动态截断偏移量')
   }
   const code =
     ((hash[offset]! & 0x7f) << 24) |

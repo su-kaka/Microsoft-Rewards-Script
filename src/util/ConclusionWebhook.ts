@@ -97,7 +97,7 @@ export async function ConclusionWebhook(
                         headers: { 'Content-Type': 'application/json' },
                         timeout: 15000
                     })
-                log('main', 'WEBHOOK', `${label} notification sent successfully (attempt ${attempt})`)
+                log('main', 'WEBHOOK', `${label} 通知发送成功（第 ${attempt} 次尝试）`)
                 return
             } catch (error) {
                 lastError = error
@@ -108,7 +108,7 @@ export async function ConclusionWebhook(
                 }
             }
         }
-        log('main', 'WEBHOOK', `${label} failed after ${maxAttempts} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`, 'error')
+        log('main', 'WEBHOOK', `${label} 发送失败，${maxAttempts} 次尝试后：${lastError instanceof Error ? lastError.message : String(lastError)}`, 'error')
     }
 
     const urls = new Set<string>()
@@ -126,9 +126,9 @@ export async function ConclusionWebhook(
 
         try {
             await Ntfy(message, ntfyType)
-            log('main', 'NTFY', 'Notification sent successfully')
+            log('main', 'NTFY', '通知发送成功')
         } catch (error) {
-            log('main', 'NTFY', `Failed to send notification: ${error instanceof Error ? error.message : String(error)}`, 'error')
+            log('main', 'NTFY', `发送通知失败：${error instanceof Error ? error.message : String(error)}`, 'error')
         }
     }
 }
@@ -296,7 +296,7 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
                     headers: { 'Content-Type': 'application/json' },
                     timeout: 15000
                 })
-                log('main', 'WEBHOOK', `${label} conclusion sent successfully (${data.totalAccounts} accounts, +${data.totalCollected}pts)`)
+                log('main', 'WEBHOOK', `${label} 结论发送成功（${data.totalAccounts} 个账户，+${data.totalCollected}pts）`)
                 return
             } catch (error) {
                 lastError = error
@@ -306,7 +306,7 @@ export async function ConclusionWebhookEnhanced(config: Config, data: Conclusion
                 }
             }
         }
-        log('main', 'WEBHOOK', `${label} failed after ${maxAttempts} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`, 'error')
+        log('main', 'WEBHOOK', `${label} 发送失败，${maxAttempts} 次尝试后：${lastError instanceof Error ? lastError.message : String(lastError)}`, 'error')
     }
 
     const urls = new Set<string>()

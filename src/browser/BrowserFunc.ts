@@ -33,7 +33,7 @@ export default class BrowserFunc {
                 })
             } catch (e: any) {
                 if (typeof e?.message === 'string' && e.message.includes('ERR_ABORTED')) {
-                    this.bot.log(this.bot.isMobile, 'GO-HOME', 'Navigation aborted, retrying...', 'warn')
+                    this.bot.log(this.bot.isMobile, 'GO-HOME', '导航中止，正在重试...', 'warn')
                     await this.bot.utils.wait(1500)
                     await page.goto(this.bot.config.baseURL, {
                         waitUntil: 'domcontentloaded',
@@ -72,7 +72,7 @@ export default class BrowserFunc {
 
                     if (suspendedByHeader) {
                         this.bot.log(this.bot.isMobile, 'GO-HOME', `通过标题选择器检测到账户暂停 (迭代 ${iteration})`, 'error')
-                        throw new Error('Account has been suspended!')
+                        throw new Error('账户已被暂停！')
                     }
 
                     try {
@@ -116,7 +116,7 @@ export default class BrowserFunc {
                         this.bot.log(
                             this.bot.isMobile,
                             'GO-HOME',
-                            `Activities not found yet (iteration ${iteration}/${RETRY_LIMITS.GO_HOME_MAX}), retrying...`,
+                            `尚未找到活动（第 ${iteration}/${RETRY_LIMITS.GO_HOME_MAX} 次迭代），正在重试...`,
                             'warn'
                         )
                     }
@@ -126,7 +126,7 @@ export default class BrowserFunc {
             }
 
             if (!success) {
-                throw new Error('Failed to reach homepage or find activities within retry limit')
+                throw new Error('无法访问主页或在重试限制内找不到活动')
             }
         } catch (error) {
             throw this.bot.log(this.bot.isMobile, '返回主页', '发生错误:' +  (error instanceof Error ? ` ${error.message}` : ` ${String(error)}`), 'error')

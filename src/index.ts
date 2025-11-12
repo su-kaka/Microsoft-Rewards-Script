@@ -408,7 +408,7 @@ export class MicrosoftRewardsBot {
             await ConclusionWebhook(
                 this.config,
                 '🚫 Ban Detected',
-                `**Account:** ${email}\n**Reason:** ${reason || 'detected by heuristics'}`,
+                `**Account:** ${email}\n**Reason:** ${reason || '由启发式检测'}`,
                 undefined,
                 DISCORD.COLOR_RED
             )
@@ -790,7 +790,7 @@ export class MicrosoftRewardsBot {
             await ConclusionWebhook(
                 this.config,
                 '🚨 Global Security Standby Engaged',
-                `@everyone\n\n**Account:** ${email}\n**Reason:** ${reason}\n**Action:** Pausing all further accounts. We will not proceed until this is resolved.`,
+                `@everyone\n\n**Account:** ${email}\n**Reason:** ${reason}\n**Action:** 暂停所有进一步账户。我们将在解决此问题后继续。`,
                 undefined,
                 DISCORD.COLOR_RED
             )

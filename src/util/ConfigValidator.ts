@@ -49,15 +49,15 @@ export class ConfigValidator {
       issues.push({
         severity: 'error',
         field: 'clusters',
-        message: 'clusters must be at least 1'
+        message: 'clusters 必须至少为 1'
       })
     }
     if (config.clusters > 10) {
       issues.push({
         severity: 'warning',
         field: 'clusters',
-        message: 'High cluster count may consume excessive resources',
-        suggestion: 'Consider using 2-4 clusters for optimal performance'
+        message: '高集群数量可能会消耗过多资源',
+        suggestion: '考虑使用 2-4 个集群以获得最佳性能'
       })
     }
 
@@ -67,16 +67,16 @@ export class ConfigValidator {
       issues.push({
         severity: 'warning',
         field: 'globalTimeout',
-        message: 'Very short timeout may cause frequent failures',
-        suggestion: 'Use at least 15s for stability'
+        message: '全局超时时间过短可能导致频繁失败',
+        suggestion: '建议使用至少 15s 以确保稳定性'
       })
     }
     if (timeout > 120000) {
       issues.push({
         severity: 'warning',
         field: 'globalTimeout',
-        message: 'Very long timeout may slow down execution',
-        suggestion: 'Use 30-60s for optimal balance'
+        message: '全局超时时间过长可能会影响执行速度',
+        suggestion: '建议使用 30-60s 以获得最佳平衡'
       })
     }
 
@@ -90,7 +90,7 @@ export class ConfigValidator {
         issues.push({
           severity: 'error',
           field: 'searchSettings.searchDelay',
-          message: 'min delay must be less than max delay'
+          message: 'min delay 必须小于 max delay'
         })
       }
 
@@ -98,8 +98,8 @@ export class ConfigValidator {
         issues.push({
           severity: 'warning',
           field: 'searchSettings.searchDelay.min',
-          message: 'Very short search delays increase ban risk',
-          suggestion: 'Use at least 30s between searches'
+          message: '搜索延迟过短可能会增加被封禁风险',
+          suggestion: '建议使用至少 30s 之间的搜索延迟'
         })
       }
 
@@ -107,8 +107,8 @@ export class ConfigValidator {
         issues.push({
           severity: 'warning',
           field: 'searchSettings.retryMobileSearchAmount',
-          message: 'Too many retries may waste time',
-          suggestion: 'Use 2-3 retries maximum'
+          message: '重试次数过多可能会浪费时间',
+          suggestion: '建议最多使用 2-3 次重试'
         })
       }
     }
@@ -119,8 +119,8 @@ export class ConfigValidator {
         issues.push({
           severity: 'warning',
           field: 'humanization',
-          message: 'stopOnBan is enabled but humanization is disabled',
-          suggestion: 'Enable humanization for better ban protection'
+          message: 'stopOnBan 已启用但 humanization 已禁用',
+          suggestion: '建议启用 humanization 以提高封禁保护'
         })
       }
 
@@ -132,7 +132,7 @@ export class ConfigValidator {
           issues.push({
             severity: 'error',
             field: 'humanization.actionDelay',
-            message: 'min action delay must be less than max'
+            message: 'min action delay 必须小于 max action delay'
           })
         }
       }
@@ -143,8 +143,8 @@ export class ConfigValidator {
             issues.push({
               severity: 'error',
               field: 'humanization.allowedWindows',
-              message: `Invalid time window format: ${window}`,
-              suggestion: 'Use format HH:mm-HH:mm (e.g., 09:00-17:00)'
+              message: `无效的时间窗口格式: ${window}`,
+              suggestion: '使用格式 HH:mm-HH:mm (例如: 09:00-17:00)'
             })
           }
         }
@@ -157,7 +157,7 @@ export class ConfigValidator {
         issues.push({
           severity: 'info',
           field: 'proxy',
-          message: 'All proxy options disabled - outbound requests will use direct connection'
+          message: '所有代理选项均已禁用 - 出站请求将使用直接连接'
         })
       }
     }
@@ -167,7 +167,7 @@ export class ConfigValidator {
       issues.push({
         severity: 'error',
         field: 'webhook.url',
-        message: 'Webhook enabled but URL is empty'
+        message: '已启用 Webhook 但 URL 为空'
       })
     }
 
@@ -175,7 +175,7 @@ export class ConfigValidator {
       issues.push({
         severity: 'error',
         field: 'conclusionWebhook.url',
-        message: 'Conclusion webhook enabled but URL is empty'
+        message: '已启用结论 Webhook 但 URL 为空'
       })
     }
 
@@ -185,14 +185,14 @@ export class ConfigValidator {
         issues.push({
           severity: 'error',
           field: 'ntfy.url',
-          message: 'NTFY enabled but URL is empty'
+          message: '已启用 NTFY 但 URL 为空'
         })
       }
       if (!config.ntfy.topic || config.ntfy.topic.trim() === '') {
         issues.push({
           severity: 'error',
           field: 'ntfy.topic',
-          message: 'NTFY enabled but topic is empty'
+          message: '已启用 NTFY 但主题为空'
         })
       }
     }
@@ -212,8 +212,8 @@ export class ConfigValidator {
         issues.push({
           severity: 'warning',
           field: 'workers',
-          message: 'All workers are disabled - bot will not perform any tasks',
-          suggestion: 'Enable at least one worker type'
+          message: '所有工作器均已禁用 - 机器人将不会执行任何任务',
+          suggestion: '启用至少一个工作器类型'
         })
       }
     }
@@ -233,9 +233,9 @@ export class ConfigValidator {
       issues.push({
         severity: 'error',
         field: 'accounts',
-        message: 'No accounts found in accounts.json'
+        message: 'accounts.json 中未找到任何账户'
       })
-      return { valid: false, issues }
+      return { valid: false, issues } 
     }
 
     const seenEmails = new Set<string>()
@@ -252,14 +252,14 @@ export class ConfigValidator {
         issues.push({
           severity: 'error',
           field: `${prefix}.email`,
-          message: 'Account email is empty'
+          message: '账户邮箱为空'
         })
       } else {
         if (seenEmails.has(acc.email)) {
           issues.push({
             severity: 'error',
             field: `${prefix}.email`,
-            message: `Duplicate email: ${acc.email}`
+            message: `重复邮箱: ${acc.email}`
           })
         }
         seenEmails.add(acc.email)
@@ -268,7 +268,7 @@ export class ConfigValidator {
           issues.push({
             severity: 'error',
             field: `${prefix}.email`,
-            message: 'Invalid email format'
+            message: '无效的邮箱格式'
           })
         }
       }
@@ -278,13 +278,13 @@ export class ConfigValidator {
         issues.push({
           severity: 'error',
           field: `${prefix}.password`,
-          message: 'Account password is empty'
+          message: '账户密码为空'
         })
       } else if (acc.password.length < 8) {
         issues.push({
           severity: 'warning',
           field: `${prefix}.password`,
-          message: 'Very short password - verify it\'s correct'
+          message: '密码过短 - 请验证是否正确'
         })
       }
 
@@ -296,7 +296,7 @@ export class ConfigValidator {
             issues.push({
               severity: 'error',
               field: `${prefix}.proxy.port`,
-              message: 'Proxy URL specified but port is missing'
+              message: '已指定代理 URL 但端口为空'
             })
           }
 
@@ -315,7 +315,7 @@ export class ConfigValidator {
           issues.push({
             severity: 'warning',
             field: `${prefix}.totp`,
-            message: 'TOTP secret seems too short - verify it\'s correct'
+            message: 'TOTP 密钥似乎过短 - 请验证是否正确'
           })
         }
       }
@@ -327,8 +327,8 @@ export class ConfigValidator {
         issues.push({
           severity: 'warning',
           field: 'accounts.proxy',
-          message: `Proxy ${proxyKey} used by ${emails.length} accounts - may trigger rate limits`,
-          suggestion: 'Use different proxies per account for better safety'
+          message: `代理 ${proxyKey} 被 ${emails.length} 个账户使用 - 可能触发速率限制`,
+          suggestion: '为每个账户使用不同的代理以提高安全性'
         })
       }
     }
@@ -351,8 +351,8 @@ export class ConfigValidator {
       issues.push({
         severity: 'info',
         field: 'clusters',
-        message: `${config.clusters} clusters configured but only ${accounts.length} account(s)`,
-        suggestion: 'Reduce clusters to match account count for efficiency'
+        message: `${config.clusters} 个集群配置，但只有 ${accounts.length} 个账户`,
+        suggestion: '将集群数量减少到与账户数量匹配以提高效率'
       })
     }
 
@@ -361,8 +361,8 @@ export class ConfigValidator {
       issues.push({
         severity: 'info',
         field: 'parallel',
-        message: 'Parallel mode enabled with single account has no effect',
-        suggestion: 'Disable parallel mode or add more accounts'
+        message: '已启用并行模式，但只有一个账户，没有效果',
+        suggestion: '禁用并行模式或添加更多账户'
       })
     }
 
@@ -381,7 +381,7 @@ export class ConfigValidator {
           issues: [{
             severity: 'error',
             field: 'config',
-            message: `Config file not found: ${configPath}`
+            message: `配置文件未找到: ${configPath}`
           }]
         }
       }
@@ -392,7 +392,7 @@ export class ConfigValidator {
           issues: [{
             severity: 'error',
             field: 'accounts',
-            message: `Accounts file not found: ${accountsPath}`
+            message: `账户文件未找到: ${accountsPath}`
           }]
         }
       }
@@ -411,7 +411,7 @@ export class ConfigValidator {
         issues: [{
           severity: 'error',
           field: 'parse',
-          message: `Failed to parse files: ${error instanceof Error ? error.message : String(error)}`
+          message: `解析文件失败: ${error instanceof Error ? error.message : String(error)}`
         }]
       }
     }
@@ -423,13 +423,13 @@ export class ConfigValidator {
    */
   static printResults(result: ValidationResult): void {
     if (result.valid) {
-      console.log('✅ Configuration validation passed\n')
+      console.log('✅ 配置文件验证通过\n')
     } else {
-      console.log('❌ Configuration validation failed\n')
+      console.log('❌ 配置文件验证失败\n')
     }
 
     if (result.issues.length === 0) {
-      console.log('No issues found.')
+      console.log('未发现问题。')
       return
     }
 

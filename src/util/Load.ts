@@ -145,7 +145,7 @@ export function loadAccounts(): Account[] {
         } else if (envFile && envFile.trim()) {
             const full = path.isAbsolute(envFile) ? envFile : path.join(process.cwd(), envFile)
             if (!fs.existsSync(full)) {
-                throw new Error(`ACCOUNTS_FILE not found: ${full}`)
+                throw new Error(`账户文件未找到: ${full}`)
             }
             json = fs.readFileSync(full, 'utf-8')
         } else {
@@ -162,7 +162,7 @@ export function loadAccounts(): Account[] {
             for (const p of candidates) {
                 try { if (fs.existsSync(p)) { chosen = p; break } } catch { /* ignore */ }
             }
-            if (!chosen) throw new Error(`accounts file not found in: ${candidates.join(' | ')}`)
+            if (!chosen) throw new Error(`账户文件未找到: ${candidates.join(' | ')}`)
             json = fs.readFileSync(chosen, 'utf-8')
         }
 
@@ -170,11 +170,11 @@ export function loadAccounts(): Account[] {
         const parsedUnknown = JSON.parse(json)
         // Accept either a root array or an object with an `accounts` array, ignore `_note`
         const parsed = Array.isArray(parsedUnknown) ? parsedUnknown : (parsedUnknown && typeof parsedUnknown === 'object' && Array.isArray((parsedUnknown as { accounts?: unknown }).accounts) ? (parsedUnknown as { accounts: unknown[] }).accounts : null)
-        if (!Array.isArray(parsed)) throw new Error('accounts must be an array')
+        if (!Array.isArray(parsed)) throw new Error('账户文件必须是数组')
         // 最小形状验证
         for (const a of parsed) {
             if (!a || typeof a.email !== 'string' || typeof a.password !== 'string') {
-                throw new Error('each account must have email and password strings')
+                throw new Error('每个账户必须包含 email 和 password 字符串')
             }
         }
         // 过滤掉禁用的账户 (enabled: false)
@@ -213,7 +213,7 @@ export function loadConfig(): Config {
         for (const p of candidates) {
             try { if (fs.existsSync(p)) { cfgPath = p; break } } catch { /* ignore */ }
         }
-        if (!cfgPath) throw new Error(`config.json not found in: ${candidates.join(' | ')}`)
+        if (!cfgPath) throw new Error(`配置文件未找到: ${candidates.join(' | ')}`)
         const config = fs.readFileSync(cfgPath, 'utf-8')
         const json = config.replace(/^\uFEFF/, '')
         const raw = JSON.parse(json)
