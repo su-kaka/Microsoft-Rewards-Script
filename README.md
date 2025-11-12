@@ -20,16 +20,16 @@
 ## 如何自动设置（二选一/自动） ##
 1. 下载或克隆源代码
 2. win系统运行setup.bat部署环境（若使用setup.bat报错，请参考手动设置）
-3. 在dist目录 `accounts.jsonc`添加你的账户信息
-4. 按照你的喜好修改dist目录 `config.jsonc` 文件
+3. 在dist目录 `accounts.json`添加你的账户信息
+4. 按照你的喜好修改dist目录 `config.json` 文件
 5. 运行 `npm start`或运行 `run.bat` 启动构建好的脚本
 ## 如何手工设置（二选一/手动） ##
 1. 下载或克隆源代码
 2. 下载安装nodejs和npm环境
 3. 运行 `npm install` 安装依赖包
 4. 若Error: browserType.launch: Executable doesn't exist报错执行 npm exec playwright install msedge
-5. 将 `accounts.example.jsonc` 重命名为 `accounts.jsonc`，并添加你的账户信息
-6. 按照你的喜好修改 `config.jsonc` 文件
+5. 将 `accounts.example.json` 重命名为 `accounts.json`，并添加你的账户信息
+6. 按照你的喜好修改 `config.json` 文件
 7. 运行 `npm run build` 构建脚本
 8. 运行 `npm start` 启动构建好的脚本
 
@@ -69,7 +69,7 @@ docker compose up -d
 |  workers.doMobileSearch    | 是否完成每日移动设备搜索任务 | `true`  |
 |  workers.doDailyCheckIn    | 是否完成每日签到任务 | `true`  |
 |  workers.doReadToEarn    | 是否完成阅读赚取积分任务 | `true`  |
-|  searchOnBingLocalQueries    | 是否使用 `queries.jsonc` 文件或从本仓库获取的查询来完成“在 Bing 上搜索”任务 | `false` （从本仓库获取）   |
+|  searchOnBingLocalQueries    | 是否使用 `queries.json` 文件或从本仓库获取的查询来完成“在 Bing 上搜索”任务 | `false` （从本仓库获取）   |
 |  globalTimeout    | 操作超时时间 | `30s`   |
 |  searchSettings.useGeoLocaleQueries    | 是否根据你的地理位置生成搜索查询 | `false` （使用中文生成的查询）  |
 |  searchSettings.useLocale    | 设置的地区 | `cn`  |
