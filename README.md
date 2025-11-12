@@ -5,25 +5,17 @@
 
 本项目不定时同步原项目代码，主要内容为本地化处理，主要针对的是国内用户无法访问外网google等问题，并在原有基础上完善功能。若有侵权请联系我删除。
 
-本项目所有改动基于win11系统。
-其他系统未测试，请根据原项目相关配置设置。
+本项目所有改动基于win11系统和docker环境。其他系统未测试，请根据原项目相关配置设置。
 
-！若需要在docker环境运行，可参考原本项目部署。特别需要注意docker模式需要将headless改为true。！
-## 新增功能 ##
-1. 添加了移动端的活动领取-2025年6月24日
-2. 添加了中文热搜内容-2025年6月25日
-3. 优化大量随机性，优化模拟人类操作-2025年7月3日
-4. 允许useLocale设置自定义地区-2025年7月10日
-5. 添加了日志本地保存功能-2025年7月26日
-6. 由于pnpm依赖导致无法编译问题，项目暂时改回使用npm管理-2025年11月11日
 
-## 如何自动设置（二选一/自动） ##
+# window环境 #
+## 如何自动设置 ##
 1. 下载或克隆源代码
 2. win系统运行setup.bat部署环境（若使用setup.bat报错，请参考手动设置）
 3. 在dist目录 `accounts.json`添加你的账户信息
 4. 按照你的喜好修改dist目录 `config.json` 文件
 5. 运行 `npm start`或运行 `run.bat` 启动构建好的脚本
-## 如何手工设置（二选一/手动） ##
+## 如何手动设置 ##
 1. 下载或克隆源代码
 2. 下载安装nodejs和npm环境
 3. 运行 `npm install` 安装依赖包
@@ -33,7 +25,7 @@
 7. 运行 `npm run build` 构建脚本
 8. 运行 `npm start` 启动构建好的脚本
 
-## Docker运行
+# Docker环境 #
 1. 下载或克隆源代码
 2. 确保`config.json`内的 `headless`设置为`true`
 3. 编辑`compose.yaml` 
@@ -51,40 +43,134 @@ docker compose up -d
 - 更新代码后，若出现错误，请先更新依赖包，`npm install`和`npm exec playwright install`
 - 若出现其他错误，请检查代码是否有语法错误，或联系作者。
 
-## 配置 ## 
-| 设置        | 描述           | 默认值  |
-| :------------- |:-------------| :-----|
-|  baseURL    | 微软奖励页面 | `https://rewards.bing.com` |
-|  sessionPath    | 会话/指纹存储路径 | `sessions` （在 `./browser/sessions` 目录下） |
-|  headless    | 浏览器窗口是否可见，是否在后台运行，若需要docker环境请改为true | `false` （浏览器可见） |
-|  parallel    | 是否并行运行移动设备和桌面端任务 | `true` |
-|  runOnZeroPoints    | 当可赚取积分为 0 时是否继续运行脚本 | `false` （积分为 0 时不运行） |
-|  clusters    | 启动时运行的实例数量，每个账户一个实例 | `1` （一次运行一个账户） |
-|  saveFingerprint.mobile    | 每次是否重复使用相同的指纹 | `false` （每次生成新的指纹） |
-|  saveFingerprint.desktop    | 每次是否重复使用相同的指纹 | `false` （每次生成新的指纹） |
-|  workers.doDailySet    | 是否完成每日任务集 | `true`  |
-|  workers.doMorePromotions    | 是否完成促销任务 | `true`  |
-|  workers.doPunchCards    | 是否完成打卡任务 | `true`  |
-|  workers.doDesktopSearch    | 是否完成每日桌面搜索任务 | `true`  |
-|  workers.doMobileSearch    | 是否完成每日移动设备搜索任务 | `true`  |
-|  workers.doDailyCheckIn    | 是否完成每日签到任务 | `true`  |
-|  workers.doReadToEarn    | 是否完成阅读赚取积分任务 | `true`  |
-|  searchOnBingLocalQueries    | 是否使用 `queries.json` 文件或从本仓库获取的查询来完成“在 Bing 上搜索”任务 | `false` （从本仓库获取）   |
-|  globalTimeout    | 操作超时时间 | `30s`   |
-|  searchSettings.useGeoLocaleQueries    | 是否根据你的地理位置生成搜索查询 | `false` （使用中文生成的查询）  |
-|  searchSettings.useLocale    | 设置的地区 | `cn`  |
-|  searchSettings.scrollRandomResults    | 是否在搜索结果中随机滚动 | `true`   |
-|  searchSettings.clickRandomResults    | 是否访问搜索结果中的随机网站 | `true`   |
-|  searchSettings.searchDelay    | 搜索查询之间的最小和最大时间间隔（毫秒） | `min: 3min`    `max: 5min` |
-|  searchSettings.retryMobileSearchAmount     | 移动设备搜索失败后的重试次数 | `2` |
-|  logExcludeFunc | 从日志和 Webhook 中排除的函数 | `SEARCH-CLOSE-TABS` |
-|  webhookLogExcludeFunc | 从 Webhook 日志中排除的函数 | `SEARCH-CLOSE-TABS` |
-|  proxy.proxyGoogleTrends     | 是否通过设置的代理转发 Google 趋势请求 | `true` （将通过代理） |
-|  proxy.proxyBingTerms     | 是否通过设置的代理转发 Bing 搜索词请求 | `true` （将通过代理） |
-|  webhook.enabled     | 是否启用你设置的 Webhook | `false` |
-|  webhook.url     | 你的 Discord Webhook URL | `null` |
-|  conclusionWebhook.enabled | 启用或禁用专用于最终摘要的 Webhook | `false` |
-|  conclusionWebhook.url | 仅用于最终摘要的 Discord Webhook URL | `null` |
+## 配置参考
+
+编辑 `src/config.json` 以自定义行为。
+以下是关键配置部分的摘要。
+
+### Core / 核心
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `baseURL` | Microsoft Rewards base URL | `https://rewards.bing.com` |
+| `sessionPath` | 用于存储浏览器会话的文件夹 | `sessions` |
+| `dryRun` | 模拟执行而不运行任务 | `false` |
+
+### Browser / 浏览器
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `browser.headless` | 无头模式运行浏览器 | `false` |
+| `browser.globalTimeout` | 操作超时时间 | `"30s"` |
+
+### Fingerprinting / 指纹识别
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `fingerprinting.saveFingerprint.mobile` | 重用移动设备指纹 | `true` |
+| `fingerprinting.saveFingerprint.desktop` | 重用桌面设备指纹 | `true` |
+
+### Execution / 执行
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `execution.parallel` | 同时运行桌面和移动版本 | `false` |
+| `execution.runOnZeroPoints` | 即使积分为零也运行 | `false` |
+| `execution.clusters` | 并发账户集群数量 | `1` |
+
+### Job State / 任务状态
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `jobState.enabled` | 保存上一个任务状态 | `true` |
+| `jobState.dir` | 任务数据目录 | `""` |
+
+### Workers (Tasks) / 工作器（任务）
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `doDailySet` | 完成每日集 | `true` |
+| `doMorePromotions` | 完成更多推广 | `true` |
+| `doPunchCards` | 完成打卡 | `true` |
+| `doDesktopSearch` | 执行桌面搜索 | `true` |
+| `doMobileSearch` | 执行移动搜索 | `true` |
+| `doDailyCheckIn` | 完成每日签到 | `true` |
+| `doReadToEarn` | 完成阅读赚钱 | `true` |
+| `bundleDailySetWithSearch` | 组合每日集和搜索 | `true` |
+
+### Search / 搜索
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `search.useLocalQueries` | 使用本地查询列表 | `true` |
+| `search.settings.useGeoLocaleQueries` | 使用基于地区的查询 | `true` |
+| `search.settings.scrollRandomResults` | 随机滚动 | `true` |
+| `search.settings.clickRandomResults` | 随机点击链接 | `true` |
+| `search.settings.retryMobileSearchAmount` | 重试移动搜索次数 | `2` |
+| `search.settings.delay.min` | 搜索间的最小延迟 | `1min` |
+| `search.settings.delay.max` | 搜索间最大延迟 | `5min` |
+
+### Query Diversity / 查询多样性
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `queryDiversity.enabled` | 启用多个查询源 | `true` |
+| `queryDiversity.sources` | 查询提供者 | `["google-trends", "reddit", "local-fallback"]` |
+| `queryDiversity.maxQueriesPerSource` | 每个源的限制 | `10` |
+| `queryDiversity.cacheMinutes` | 缓存生命周期 | `30` |
+
+### Humanization / 人性化
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `humanization.enabled` | 启用人类行为 | `true` |
+| `stopOnBan` | 封禁时立即停止 | `true` |
+| `immediateBanAlert` | 被封禁时立即提醒 | `true` |
+| `actionDelay.min` | 每个操作的最小延迟(毫秒) | `500` |
+| `actionDelay.max` | 每个操作的最大延迟(毫秒) | `2200` |
+| `gestureMoveProb` | 随机鼠标移动几率 | `0.65` |
+| `gestureScrollProb` | 随机滚动几率 | `0.4` |
+
+### Vacation Mode / 假期模式
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `vacation.enabled` | 启用随机暂停 | `true` |
+| `minDays` | 最短休息天数 | `2` |
+| `maxDays` | 最长休息天数 | `4` |
+
+### Risk Management / 风险管理
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `enabled` | 启用基于风险的调整 | `true` |
+| `autoAdjustDelays` | 动态适应延迟 | `true` |
+| `stopOnCritical` | 遇到严重警告时停止 | `false` |
+| `banPrediction` | 基于信号预测封禁 | `true` |
+| `riskThreshold` | 风险承受水平 | `75` |
+
+### Retry Policy / 重试策略
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `maxAttempts` | 最大重试次数 | `3` |
+| `baseDelay` | 初始重试延迟 | `1000` |
+| `maxDelay` | 最大重试延迟 | `30s` |
+| `multiplier` | 退避倍数 | `2` |
+| `jitter` | 随机抖动因子 | `0.2` |
+
+### Proxy / 代理
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `proxy.proxyGoogleTrends` | 为Google Trends请求使用代理 | `true` |
+| `proxy.proxyBingTerms` | 为Bing条款请求使用代理 | `true` |
+
+### Notifications / 通知
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `notifications.webhook.enabled` | 启用Discord Webhook | `false` |
+| `notifications.webhook.url` | Discord Webhook URL | `""` |
+| `notifications.conclusionWebhook.enabled` | 启用总结Webhook | `false` |
+| `notifications.conclusionWebhook.url` | 总结Webhook URL | `""` |
+| `notifications.ntfy.enabled` | 启用Ntfy推送提醒 | `false` |
+| `notifications.ntfy.url` | Ntfy服务器URL | `""` |
+| `notifications.ntfy.topic` | Ntfy主题名称 | `"rewards"` |
+
+### Logging / 日志
+| 设置 | 描述 | 默认值 |
+|----------|-------------|----------|
+| `excludeFunc` | 从控制台日志中排除 | `["SEARCH-CLOSE-TABS", "LOGIN-NO-PROMPT", "FLOW"]` |
+| `webhookExcludeFunc` | 从Webhook日志中排除 | `["SEARCH-CLOSE-TABS", "LOGIN-NO-PROMPT", "FLOW"]` |
+| `redactEmails` | 在日志中隐藏邮箱 | `true` |
+---
 ## 功能 ##
 - [x] 多账户支持
 - [x] 会话存储
@@ -115,6 +201,16 @@ docker compose up -d
 - [x] 代理支持
 - [x] Docker 支持（实验性）
 - [x] 自动调度（通过 Docker）
+
+
+## 更新日志 ##
+1. 添加了移动端的活动领取-2025年6月24日
+2. 添加了中文热搜内容-2025年6月25日
+3. 优化大量随机性，优化模拟人类操作-2025年7月3日
+4. 允许useLocale设置自定义地区-2025年7月10日
+5. 添加了日志本地保存功能-2025年7月26日
+6. 由于pnpm依赖导致无法编译问题，项目暂时改回使用npm管理-2025年11月11日
+7. 补充docker的运行方式-2025年11月11日
 
 ## 免责声明 ##
 使用此脚本可能会导致你的账户被封禁或暂停，请注意！
