@@ -38,9 +38,10 @@ ENV NODE_ENV=production \
     TZ=UTC \
     PLAYWRIGHT_BROWSERS_PATH=0
 
-# Install minimal system libraries
+# Install minimal system libraries and cron
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    cron \
     libasound2 \
     libatk1.0-0 \
     libc6 \
@@ -80,10 +81,11 @@ COPY --from=builder /usr/src/microsoft-rewards-script/dist ./dist
 COPY --from=builder /usr/src/microsoft-rewards-script/package*.json ./
 COPY --from=builder /usr/src/microsoft-rewards-script/node_modules ./node_modules
 
-# Copy scripts
+# Copy scripts and config files
 COPY --chmod=755 src/run_daily.sh ./src/run_daily.sh
 COPY --chmod=644 src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
 COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY src/accounts.json ./src/accounts.json
 
 # Create log directory
 RUN mkdir -p /var/log

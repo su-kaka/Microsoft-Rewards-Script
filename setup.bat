@@ -2,118 +2,118 @@
 setlocal enabledelayedexpansion
 
 echo ===================================
-echo ΢�������ű������Զ���װ����
+echo 微软奖励脚本环境自动安装程序
 echo ===================================
 echo.
 
-:: ���Node.js�Ƿ��Ѱ�װ
+:: 检查Node.js是否已安装
 where node >nul 2>nul
 if %ERRORLEVEL% neq 0 (
-    echo Node.jsδ��װ���������ز���װ...
+    echo Node.js未安装，正在下载并安装...
     
-    :: ������ʱĿ¼
+    :: 创建临时目录
     mkdir %TEMP%\node-install >nul 2>nul
     cd %TEMP%\node-install
     
-    :: ����Node.js��װ����
-    echo ��������Node.js��װ����...
+    :: 下载Node.js安装程序
+    echo 正在下载Node.js安装程序...
     powershell -Command "(New-Object System.Net.WebClient).DownloadFile('https://nodejs.org/dist/v22.16.0/node-v22.16.0-x64.msi', 'node-installer.msi')"
     
-    :: ��װNode.js
-    echo ���ڰ�װNode.js...
+    :: 安装Node.js
+    echo 正在安装Node.js...
     start /wait msiexec /i node-installer.msi /quiet /norestart
     
-    :: ������ʱ�ļ�
+    :: 清理临时文件
     cd %~dp0
     rmdir /s /q %TEMP%\node-install >nul 2>nul
     
 
-    :: ���Node.js�Ƿ����
+    :: 检查Node.js是否可用
     where node >nul 2>nul
     if %ERRORLEVEL% neq 0 (
-        echo ���棺Node.js��װ��ɣ���������������δ��Ч��
-        echo ��رմ˴��ڣ����´�������ʾ����Ȼ������setup.bat������װ��
+        echo 警告：Node.js安装完成，但环境变量可能未生效。
+        echo 请关闭此窗口，重新打开命令提示符，然后运行setup.bat继续安装。
         pause
         exit
     )
 ) else (
-    echo Node.js�Ѱ�װ���汾��Ϣ��
+    echo Node.js已安装，版本信息：
     node -v
 )
 
-:: ���pnpm�Ƿ��Ѱ�װ
+:: 检查npm是否已安装
 where npm >nul 2>nul
 if %ERRORLEVEL% neq 0 (
-    echo npm����...
+    echo npm更新...
     call npm install -g npm
-    echo npmδ��װ�����ڰ�װ...
+    echo npm未安装，正在安装...
 
     if %ERRORLEVEL% neq 0 (
-        echo ��װnpmʧ�ܣ������������ӻ��ֶ���װ��
+        echo 安装npm失败，请检查网络连接或手动安装。
         pause
         exit /b 1
     )
 ) else (
-    echo npm�Ѱ�װ
+    echo npm已安装
 )
 
 echo.
 
-:: ��װ��Ŀ����
-echo ���ڰ�װ��Ŀ����...
+:: 安装项目依赖
+echo 正在安装项目依赖...
 call npm install
 if %ERRORLEVEL% neq 0 (
-    echo ��װ����ʧ�ܣ������������ӻ��ֶ���װ��
+    echo 安装依赖失败，请检查网络连接或手动安装。
     pause
     exit /b 1
 )
 
-:: ��װPlaywright
-echo ���ڰ�װPlaywright...
+:: 安装Playwright
+echo 正在安装Playwright...
 call npm exec playwright install chromium
 call npm exec playwright install msedge
 if %ERRORLEVEL% neq 0 (
-    echo ��װPlaywrightʧ�ܣ������������ӻ��ֶ���װ��
+    echo 安装Playwright失败，请检查网络连接或手动安装。
     pause
     exit /b 1
 )
 
-:: ��鲢׼���˻������ļ�
-if not exist "src\accounts.jsonc" (
-    if exist "src\accounts.example.jsonc" (
-        echo ���ڴ����˻������ļ�...
-        copy "src\accounts.example.jsonc" "src\accounts.jsonc"
-        echo �Ѵ���accounts.jsonc�ļ����������нű�ǰ�༭���ļ����������˻���Ϣ��
+:: 检查并准备账户配置文件
+if not exist "src\accounts.json" (
+    if exist "src\accounts.example.json" (
+        echo 正在创建账户配置文件...
+        copy "src\accounts.example.json" "src\accounts.json"
+        echo 已创建accounts.json文件，请在运行脚本前编辑此文件添加您的账户信息。
     ) else (
-        echo ���棺δ�ҵ�accounts.example.jsonc�ļ������ֶ�����accounts.jsonc�ļ���
+        echo 警告：未找到accounts.example.json文件，请手动创建accounts.json文件。
     )
 ) else (
-    echo accounts.json�ļ��Ѵ��ڡ�
+    echo accounts.json文件已存在。
 )
 
-:: ������Ŀ
-echo ���ڹ�����Ŀ...
+:: 构建项目
+echo 正在构建项目...
 call npm run build
 if %ERRORLEVEL% neq 0 (
-    echo ������Ŀʧ�ܣ����������Ϣ��
+    echo 构建项目失败，请检查错误信息。
     pause
     exit /b 1
 )
 
-:: ��������ļ�
-if exist "dist\config.jsonc" (
-    echo config.json�ļ��Ѵ��ڣ���ȷ���Ѱ�������ϲ�ý��������á�
+:: 检查配置文件
+if exist "dist\config.json" (
+    echo config.json文件已存在，请确保已按照您的喜好进行了配置。
 ) else (
-    echo ���棺δ�ҵ�config.jsonc�ļ�����ȷ�����ļ����ڲ�����ȷ���á�
+    echo 警告：未找到config.json文件，请确保该文件存在并已正确配置。
 )
 
 echo.
 echo ===================================
-echo ��װ��ɣ�
-echo �������裺
-echo 1. dist\accounts.jsonc�ļ����������˻���Ϣ
-echo 2. ��鲢�����޸�dist\config.jsonc�����ļ�
-echo 3. ִ���ն����npm start�������нű���run.bat
+echo 安装完成！
+echo 后续步骤：
+echo 1. dist\accounts.json文件添加您的账户信息
+echo 2. 检查并按需修改dist\config.json配置文件
+echo 3. 执行终端命令：npm start，或运行脚本：run.bat
 echo ===================================
 
 pause

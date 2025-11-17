@@ -150,7 +150,6 @@ export function loadAccounts(): Account[] {
             json = fs.readFileSync(full, 'utf-8')
         } else {
             // Try multiple locations to support both root mounts and dist mounts
-            // Support both .json and .json extensions
             const candidates = [
                 path.join(__dirname, '../', file),
                 path.join(__dirname, '../src', file),

@@ -1,0 +1,4 @@
+# Microsoft Rewards Script Cron Job
+# Format: minute hour day month weekday command
+# Example: Run at 2 AM every day
+0 2 * * * /usr/src/microsoft-rewards-script/src/run_daily.sh >> /var/log/cron.log 2>&1
