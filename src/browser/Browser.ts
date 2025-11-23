@@ -43,6 +43,7 @@ class Browser {
                 headless,
                 ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
                 args: [
+                    '--blink-settings=imagesEnabled=false',
                     '--disable-quic',
                     '--no-sandbox',
                     '--mute-audio',
