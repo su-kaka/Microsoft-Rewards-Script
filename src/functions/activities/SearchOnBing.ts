@@ -32,7 +32,7 @@ export class SearchOnBing extends Workers {
                 await page.keyboard.type(query, { delay: DELAYS.TYPING_DELAY })
                 await page.keyboard.press('Enter')
             } catch {
-                const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}`
+                const url = `https://cn.bing.com/search?q=${encodeURIComponent(query)}`
                 await page.goto(url)
             }
             await this.bot.utils.wait(DELAYS.SEARCH_ON_BING_COMPLETE)

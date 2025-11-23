@@ -22,7 +22,7 @@ type GoogleTrendsResponse = [
  */
 export class Search extends Workers {
     /** 必应首页URL */
-    private bingHome = 'https://www.bing.com'
+    private bingHome = 'https://cn.bing.com'
     /** 当前搜索结果页面URL */
     private searchPageURL = ''
     /** 首次滚动标志 */
@@ -246,7 +246,7 @@ export class Search extends Workers {
                 } catch (typeErr) {
                     // As a robust fallback, navigate directly to the search results URL
                     const q = encodeURIComponent(query)
-                    const url = `https://www.bing.com/search?q=${q}`
+                    const url = `https://cn.bing.com/search?q=${q}`
                     await searchPage.goto(url)
                     navigatedDirectly = true
                 }

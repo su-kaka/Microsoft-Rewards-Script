@@ -86,7 +86,7 @@ export class Login {
       this.bot.log(this.bot.isMobile, 'LOGIN', '开始登录过程')
       this.currentTotpSecret = (totpSecret && totpSecret.trim()) || undefined
 
-      await page.goto('https://www.bing.com/rewards/dashboard')
+      await page.goto('https://cn.bing.com/rewards/dashboard')
       await this.disableFido(page)
       await page.waitForLoadState('domcontentloaded').catch(() => { })
       await this.bot.browser.utils.reloadBadPage(page)
@@ -604,10 +604,10 @@ export class Login {
   private async verifyBingContext(page: Page) {
     try {
       this.bot.log(this.bot.isMobile, 'LOGIN-BING', '验证Bing认证上下文')
-      await page.goto('https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F')
+      await page.goto('https://cn.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fcn.bing.com%2F')
       for (let i = 0; i < 5; i++) {
         const u = new URL(page.url())
-        if (u.hostname === 'www.bing.com' && u.pathname === '/') {
+        if (u.hostname === 'cn.bing.com' && u.pathname === '/') {
           await this.bot.browser.utils.tryDismissAllMessages(page)
           const ok = await page.waitForSelector('#id_n', { timeout: 3000 }).then(()=>true).catch(()=>false)
           if (ok || this.bot.isMobile) { this.bot.log(this.bot.isMobile,'LOGIN-BING','Bing验证通过'); break }
