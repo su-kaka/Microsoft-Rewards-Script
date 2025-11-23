@@ -3,7 +3,7 @@
     "sessionPath": "sessions",
     "dryRun": false,
     "browser": {
-        "headless": false,
+        "headless": true,
         "globalTimeout": "60s"
     },
     "fingerprinting": {
