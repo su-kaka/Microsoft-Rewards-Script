@@ -139,40 +139,58 @@ export default class BrowserFunc {
      * @returns {DashboardData} Object of user bing rewards dashboard data
     */
     async getDashboardData(page?: Page): Promise<DashboardData> {
-        const target = page ?? this.bot.homePage
+        let target = page ?? this.bot.homePage
         const dashboardURL = new URL(this.bot.config.baseURL)
-        const currentURL = new URL(target.url())
-
+        
         try {
+            const currentURL = new URL(target.url())
             // Should never happen since tasks are opened in a new tab!
             if (currentURL.hostname !== dashboardURL.hostname) {
                 this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', '提供的页面不是仪表盘页面，正在重定向到仪表盘页面')
                 await this.goHome(target)
             }
-            let lastError: unknown = null
-            for (let attempt = 1; attempt <= 2; attempt++) {
-                try {
-                    // Reload the page to get new data
-                    await target.reload({ waitUntil: 'domcontentloaded' })
-                    lastError = null
-                    break
-                } catch (re) {
-                    lastError = re
-                    const msg = (re instanceof Error ? re.message : String(re))
-                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `重载失败尝试 ${attempt}: ${msg}`, 'warn')
-                    // If page/context closed => bail early after first retry
-                    if (msg.includes('has been closed')) {
-                        if (attempt === 1) {
-                            this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '页面似乎已关闭；尝试一次导航回退', 'warn')
-                            try {
-                                await this.goHome(target)
-                            } catch {/* ignore */ }
-                        } else {
-                            break
+        } catch (urlError) {
+            // 可能页面已关闭，url() 会抛出错误
+            this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '无法获取页面URL，可能页面已关闭', 'warn')
+        }
+
+        try {
+            // 简单粗暴：检测到页面关闭就重建页面
+            try {
+                await target.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
+            } catch (reloadError) {
+                const msg = (reloadError instanceof Error ? reloadError.message : String(reloadError))
+                
+                if (msg.includes('has been closed')) {
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '页面已关闭，正在重建新页面...', 'warn')
+                    
+                    // 尝试从 context 创建新页面
+                    try {
+                        const context = target.context()
+                        const newPage = await context.newPage()
+                        
+                        // 如果这是 homePage，更新引用
+                        if (!page) {
+                            this.bot.homePage = newPage
                         }
+                        target = newPage
+                        
+                        this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '新页面创建成功，正在导航...', 'log')
+                        await this.goHome(target)
+                    } catch (recreateError) {
+                        // Context 也关闭了，无法恢复
+                        throw this.bot.log(
+                            this.bot.isMobile,
+                            'GET-DASHBOARD-DATA',
+                            `无法重建页面: ${recreateError instanceof Error ? recreateError.message : String(recreateError)}`,
+                            'error'
+                        )
                     }
-                    if (attempt === 2 && lastError) throw lastError
-                    await this.bot.utils.wait(1000)
+                } else {
+                    // 其他错误 - 重试一次
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `重载失败，正在重试: ${msg}`, 'warn')
+                    await this.bot.utils.wait(2000)
+                    await target.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
                 }
             }
 
@@ -197,7 +215,7 @@ export default class BrowserFunc {
                 // 在硬失败之前强制导航重试一次
                 try {
                     await this.goHome(target)
-                    await target.waitForLoadState('domcontentloaded', { timeout: TIMEOUTS.VERY_LONG }).catch((e) => {
+                    await target.waitForLoadState('domcontentloaded', { timeout: TIMEOUTS.VERY_LONG }).catch((e: Error) => {
                         this.bot.log(this.bot.isMobile, '获取仪表盘数据', `等待加载状态失败: ${e}`, 'warn')
                     })
                     await this.bot.utils.wait(this.bot.isMobile ? TIMEOUTS.LONG : TIMEOUTS.MEDIUM)
