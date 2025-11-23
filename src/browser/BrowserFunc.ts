@@ -139,8 +139,30 @@ export default class BrowserFunc {
      * @returns {DashboardData} Object of user bing rewards dashboard data
     */
     async getDashboardData(page?: Page): Promise<DashboardData> {
-        // 默认使用 homePage，homePage 应该在整个账号任务期间持久化
-        const target = page ?? this.bot.homePage
+        // 如果传入了 page，使用传入的 page（用于特殊情况）
+        // 否则使用 homePage（默认情况）
+        let target = page ?? this.bot.homePage
+        
+        // 如果使用的是 homePage，检查其是否有效
+        if (!page && this.bot.homePage) {
+            try {
+                // 尝试获取 URL 来验证页面是否仍然有效
+                await this.bot.homePage.url()
+            } catch (e) {
+                // homePage 已关闭或无效，尝试从 context 创建新页面
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', 'homePage 已失效，正在创建新页面', 'warn')
+                try {
+                    const context = this.bot.homePage.context()
+                    const newHomePage = await context.newPage()
+                    await this.goHome(newHomePage)
+                    this.bot.homePage = newHomePage
+                    target = newHomePage
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '新 homePage 创建成功', 'log')
+                } catch (recreateError) {
+                    throw new Error(`无法重建 homePage: ${recreateError instanceof Error ? recreateError.message : String(recreateError)}`)
+                }
+            }
+        }
         
         try {
             // reload 获取最新数据
@@ -148,14 +170,29 @@ export default class BrowserFunc {
                 await target.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
             } catch (reloadError) {
                 const msg = (reloadError instanceof Error ? reloadError.message : String(reloadError))
-                // 页面关闭了说明整个 context 可能挂了，直接抛错让上层处理
+                // 页面关闭了，尝试恢复
                 if (msg.includes('has been closed')) {
-                    throw new Error('页面已关闭，浏览器上下文可能已失效，需要重新初始化整个流程')
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '页面已关闭，尝试创建新页面', 'warn')
+                    try {
+                        const context = target.context()
+                        const newPage = await context.newPage()
+                        await this.goHome(newPage)
+                        
+                        // 如果是 homePage，更新引用
+                        if (!page) {
+                            this.bot.homePage = newPage
+                        }
+                        target = newPage
+                        this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '新页面创建成功', 'log')
+                    } catch (recreateError) {
+                        throw new Error(`无法重建页面: ${recreateError instanceof Error ? recreateError.message : String(recreateError)}`)
+                    }
+                } else {
+                    // 其他错误重试一次
+                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `重载失败，重试中: ${msg}`, 'warn')
+                    await this.bot.utils.wait(2000)
+                    await target.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
                 }
-                // 其他错误重试一次
-                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `重载失败，重试中: ${msg}`, 'warn')
-                await this.bot.utils.wait(2000)
-                await target.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
             }
 
             // Wait for scripts to load

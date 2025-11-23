@@ -40,8 +40,8 @@
             "clickRandomResults": true,
             "retryMobileSearchAmount": 2,
             "delay": {
-                "min": "7min",
-                "max": "15min"
+                "min": "2min",
+                "max": "3min"
             }
         }
     },
