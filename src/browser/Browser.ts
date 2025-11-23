@@ -43,6 +43,7 @@ class Browser {
                 headless,
                 ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
                 args: [
+                    '--disable-quic',
                     '--no-sandbox',
                     '--mute-audio',
                     '--disable-setuid-sandbox',
@@ -71,7 +72,7 @@ class Browser {
 
         const fingerprint = sessionData.fingerprint ? sessionData.fingerprint : await this.generateFingerprint()
 
-        const context = await newInjectedContext(browser as unknown as import('playwright').Browser, { fingerprint: fingerprint })
+        const context = await newInjectedContext(browser as unknown as playwright.Browser, { fingerprint: fingerprint })
 
         // Set timeout to preferred amount (supports legacy globalTimeout or browser.globalTimeout)
         const legacyTimeout = (this.bot.config as { globalTimeout?: number | string }).globalTimeout

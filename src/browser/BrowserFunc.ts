@@ -139,62 +139,26 @@ export default class BrowserFunc {
      * @returns {DashboardData} Object of user bing rewards dashboard data
     */
     async getDashboardData(page?: Page): Promise<DashboardData> {
-        let target = page ?? this.bot.homePage
-        const dashboardURL = new URL(this.bot.config.baseURL)
+        // 默认使用 homePage，homePage 应该在整个账号任务期间持久化
+        const target = page ?? this.bot.homePage
         
         try {
-            const currentURL = new URL(target.url())
-            // Should never happen since tasks are opened in a new tab!
-            if (currentURL.hostname !== dashboardURL.hostname) {
-                this.bot.log(this.bot.isMobile, 'DASHBOARD-DATA', '提供的页面不是仪表盘页面，正在重定向到仪表盘页面')
-                await this.goHome(target)
-            }
-        } catch (urlError) {
-            // 可能页面已关闭，url() 会抛出错误
-            this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '无法获取页面URL，可能页面已关闭', 'warn')
-        }
-
-        try {
-            // 简单粗暴：检测到页面关闭就重建页面
+            // reload 获取最新数据
             try {
                 await target.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
             } catch (reloadError) {
                 const msg = (reloadError instanceof Error ? reloadError.message : String(reloadError))
-                
+                // 页面关闭了说明整个 context 可能挂了，直接抛错让上层处理
                 if (msg.includes('has been closed')) {
-                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '页面已关闭，正在重建新页面...', 'warn')
-                    
-                    // 尝试从 context 创建新页面
-                    try {
-                        const context = target.context()
-                        const newPage = await context.newPage()
-                        
-                        // 如果这是 homePage，更新引用
-                        if (!page) {
-                            this.bot.homePage = newPage
-                        }
-                        target = newPage
-                        
-                        this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '新页面创建成功，正在导航...', 'log')
-                        await this.goHome(target)
-                    } catch (recreateError) {
-                        // Context 也关闭了，无法恢复
-                        throw this.bot.log(
-                            this.bot.isMobile,
-                            'GET-DASHBOARD-DATA',
-                            `无法重建页面: ${recreateError instanceof Error ? recreateError.message : String(recreateError)}`,
-                            'error'
-                        )
-                    }
-                } else {
-                    // 其他错误 - 重试一次
-                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `重载失败，正在重试: ${msg}`, 'warn')
-                    await this.bot.utils.wait(2000)
-                    await target.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
+                    throw new Error('页面已关闭，浏览器上下文可能已失效，需要重新初始化整个流程')
                 }
+                // 其他错误重试一次
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `重载失败，重试中: ${msg}`, 'warn')
+                await this.bot.utils.wait(2000)
+                await target.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
             }
 
-            // Wait a bit longer for scripts to load, especially on mobile
+            // Wait for scripts to load
             await this.bot.utils.wait(this.bot.isMobile ? TIMEOUTS.LONG : TIMEOUTS.MEDIUM)
 
             // Wait for the more-activities element to ensure page is fully loaded
@@ -202,54 +166,37 @@ export default class BrowserFunc {
                 this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '未找到活动元素，仍然继续', 'warn')
             })
 
+            // 解析页面中的 dashboard 数据
             let scriptContent = await target.evaluate(() => {
                 const scripts = Array.from(document.querySelectorAll('script'))
                 const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
-
                 return targetScript?.innerText ? targetScript.innerText : null
             })
 
             if (!scriptContent) {
-                this.bot.log(this.bot.isMobile, '获取仪表盘数据', '首次尝试未找到仪表盘脚本，正在尝试恢复。', 'warn')
+                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '未找到仪表盘脚本，尝试重新导航', 'warn')
+                // 最后尝试一次：重新导航到主页
+                await this.goHome(target)
+                await this.bot.utils.wait(this.bot.isMobile ? TIMEOUTS.LONG : TIMEOUTS.MEDIUM)
                 
-                // 在硬失败之前强制导航重试一次
-                try {
-                    await this.goHome(target)
-                    await target.waitForLoadState('domcontentloaded', { timeout: TIMEOUTS.VERY_LONG }).catch((e: Error) => {
-                        this.bot.log(this.bot.isMobile, '获取仪表盘数据', `等待加载状态失败: ${e}`, 'warn')
-                    })
-                    await this.bot.utils.wait(this.bot.isMobile ? TIMEOUTS.LONG : TIMEOUTS.MEDIUM)
-                } catch (e) {
-                    this.bot.log(this.bot.isMobile, '获取仪表盘数据', `导航重试失败: ${e}`, 'warn')
-                }
-
-                const retryContent = await target.evaluate(() => {
+                scriptContent = await target.evaluate(() => {
                     const scripts = Array.from(document.querySelectorAll('script'))
                     const targetScript = scripts.find(script => script.innerText.includes('var dashboard'))
                     return targetScript?.innerText ? targetScript.innerText : null
                 }).catch(() => null)
 
-                if (!retryContent) {
-                    // 记录额外的调试信息
-                    const scriptsDebug = await target.evaluate(() => {
-                        const scripts = Array.from(document.querySelectorAll('script'))
-                        return scripts.map(s => s.innerText.substring(0, 100)).join(' | ')
-                    }).catch(() => '无法获取脚本调试信息')
-                    
-                    this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `可用脚本预览: ${scriptsDebug}`, 'warn')
-                    throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '在脚本中未找到仪表盘数据', 'error')
+                if (!scriptContent) {
+                    throw new Error('在脚本中未找到仪表盘数据')
                 }
-                scriptContent = retryContent
             }
 
             // Extract the dashboard object from the script content
             const dashboardData = await target.evaluate((scriptContent: string) => {
-                // Try multiple regex patterns for better compatibility
                 const patterns = [
-                    /var dashboard = (\{.*?\});/s,           // Original pattern
-                    /var dashboard=(\{.*?\});/s,             // No spaces
-                    /var\s+dashboard\s*=\s*(\{.*?\});/s,     // Flexible whitespace
-                    /dashboard\s*=\s*(\{[\s\S]*?\});/        // More permissive
+                    /var dashboard = (\{.*?\});/s,
+                    /var dashboard=(\{.*?\});/s,
+                    /var\s+dashboard\s*=\s*(\{.*?\});/s,
+                    /dashboard\s*=\s*(\{[\s\S]*?\});/
                 ]
 
                 for (const regex of patterns) {
@@ -258,29 +205,22 @@ export default class BrowserFunc {
                         try {
                             return JSON.parse(match[1])
                         } catch (e) {
-                            // Try next pattern if JSON parsing fails
                             continue
                         }
                     }
                 }
-
                 return null
-
             }, scriptContent)
 
             if (!dashboardData) {
-                // 记录脚本内容片段用于调试
-                const scriptPreview = scriptContent.substring(0, 200)
-                this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `脚本预览: ${scriptPreview}`, 'warn')
-                throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', '无法解析仪表盘脚本', 'error')
+                throw new Error('无法解析仪表盘脚本数据')
             }
 
             return dashboardData
 
         } catch (error) {
-            throw this.bot.log(this.bot.isMobile, '获取仪表盘数据', `获取仪表盘数据时出错: ${error}`, 'error')
+            throw this.bot.log(this.bot.isMobile, 'GET-DASHBOARD-DATA', `获取仪表盘数据失败: ${error instanceof Error ? error.message : String(error)}`, 'error')
         }
-
     }
 
     /**
