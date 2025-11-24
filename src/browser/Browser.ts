@@ -6,6 +6,7 @@ import { FingerprintGenerator } from 'fingerprint-generator'
 import { MicrosoftRewardsBot } from '../index'
 import { loadSessionData, saveFingerprintData } from '../util/Load'
 import { updateFingerprintUserAgent } from '../util/UserAgent'
+import ProxyServerManager from '../util/ProxyServer'
 
 import { AccountProxy } from '../interface/Account'
 
@@ -19,9 +20,12 @@ https://www.browserscan.net/
 
 class Browser {
     private bot: MicrosoftRewardsBot
+    private proxyServerManager: ProxyServerManager
+    private currentProxyKey?: string
 
     constructor(bot: MicrosoftRewardsBot) {
         this.bot = bot
+        this.proxyServerManager = new ProxyServerManager()
     }
 
     async createBrowser(proxy: AccountProxy, email: string): Promise<BrowserContext> {
@@ -37,11 +41,39 @@ class Browser {
 
             const engineName = 'chromium' // 当前硬编码的引擎
             this.bot.log(this.bot.isMobile, 'BROWSER', `启动 ${engineName} (headless=${headless})`) // 明确的引擎日志
+            
+            // 处理 SOCKS 代理：创建本地 HTTP 代理中转
+            let effectiveProxy = proxy
+            if (proxy.url && ProxyServerManager.isSocksProxy(proxy.url)) {
+                this.bot.log(this.bot.isMobile, 'BROWSER', `检测到 SOCKS 代理，创建本地 HTTP 代理中转...`)
+                try {
+                    const localProxy = await this.proxyServerManager.createLocalProxy(proxy)
+                    effectiveProxy = {
+                        ...proxy,
+                        url: localProxy.url,
+                        port: localProxy.port,
+                        username: '',
+                        password: ''
+                    }
+                    this.currentProxyKey = `${proxy.url}:${proxy.port}`
+                    this.bot.log(this.bot.isMobile, 'BROWSER', `本地代理中转已创建: ${localProxy.url}:${localProxy.port}`)
+                } catch (error) {
+                    this.bot.log(this.bot.isMobile, 'BROWSER', `创建代理中转失败: ${error instanceof Error ? error.message : String(error)}`, 'error')
+                    throw error
+                }
+            }
+            
             browser = await playwright.chromium.launch({
                 // Optional: uncomment to use Edge instead of Chromium
                 // channel: 'msedge',
                 headless,
-                ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
+                ...(effectiveProxy.url && { 
+                    proxy: { 
+                        username: effectiveProxy.username, 
+                        password: effectiveProxy.password, 
+                        server: `${effectiveProxy.url}:${effectiveProxy.port}` 
+                    } 
+                }),
                 args: [
                     '--blink-settings=imagesEnabled=false',
                     '--disable-quic',
@@ -54,6 +86,9 @@ class Browser {
                 ]
             })
         } catch (e: unknown) {
+            // 清理代理服务器
+            await this.cleanup()
+            
             const msg = (e instanceof Error ? e.message : String(e))
             // 常见的浏览器可执行文件缺失指导
             if (/Executable doesn't exist/i.test(msg)) {
@@ -124,6 +159,23 @@ class Browser {
         this.bot.log(this.bot.isMobile, '浏览器', `已创建浏览器，用户代理User-Agent: "${fingerprint.fingerprint.navigator.userAgent}"`)
 
         return context as BrowserContext
+    }
+
+    /**
+     * 清理代理服务器资源
+     */
+    async cleanup(): Promise<void> {
+        if (this.currentProxyKey) {
+            await this.proxyServerManager.closeProxy(this.currentProxyKey)
+            this.currentProxyKey = undefined
+        }
+    }
+
+    /**
+     * 关闭所有代理服务器
+     */
+    async cleanupAll(): Promise<void> {
+        await this.proxyServerManager.closeAll()
     }
 
     async generateFingerprint() {

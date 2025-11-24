@@ -21,15 +21,33 @@ class AxiosClient {
     }
 
     private getAgentForProxy(proxyConfig: AccountProxy): HttpProxyAgent<string> | HttpsProxyAgent<string> | SocksProxyAgent {
-        const { url, port } = proxyConfig
+        const { url, port, username, password } = proxyConfig
 
+        // 构建包含认证的代理 URL
+        let proxyUrl: string
+        const hasAuth = username && password
+        
         switch (true) {
-            case proxyConfig.url.startsWith('http://'):
-                return new HttpProxyAgent(`${url}:${port}`)
-            case proxyConfig.url.startsWith('https://'):
-                return new HttpsProxyAgent(`${url}:${port}`)
-            case proxyConfig.url.startsWith('socks://') || proxyConfig.url.startsWith('socks4://') || proxyConfig.url.startsWith('socks5://'):
-                return new SocksProxyAgent(`${url}:${port}`)
+            case url.startsWith('http://'):
+                proxyUrl = hasAuth 
+                    ? `http://${encodeURIComponent(username!)}:${encodeURIComponent(password!)}@${url.replace('http://', '')}:${port}`
+                    : `${url}:${port}`
+                return new HttpProxyAgent(proxyUrl)
+                
+            case url.startsWith('https://'):
+                proxyUrl = hasAuth 
+                    ? `https://${encodeURIComponent(username!)}:${encodeURIComponent(password!)}@${url.replace('https://', '')}:${port}`
+                    : `${url}:${port}`
+                return new HttpsProxyAgent(proxyUrl)
+                
+            case url.startsWith('socks://') || url.startsWith('socks4://') || url.startsWith('socks5://'):
+                const protocol = url.split('://')[0]
+                const host = url.split('://')[1] || url
+                proxyUrl = hasAuth 
+                    ? `${protocol}://${encodeURIComponent(username!)}:${encodeURIComponent(password!)}@${host}:${port}`
+                    : `${protocol}://${host}:${port}`
+                return new SocksProxyAgent(proxyUrl)
+                
             default:
                 throw new Error(`Unsupported proxy protocol in "${url}". Supported: http://, https://, socks://, socks4://, socks5://`)
         }
