@@ -1,0 +1,79 @@
+name: 自动同步上游仓库
+
+on:
+  # 定时执行，每天 UTC 时间 0 点运行（北京时间早上 8 点）
+  schedule:
+    - cron: '0 0 * * *'
+  
+  # 允许手动触发
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+        with:
+          # 获取完整历史记录以便合并
+          fetch-depth: 0
+          # 使用 GitHub Token 进行身份验证
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 配置 Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: 添加上游仓库
+        run: |
+          # 替换下面的 URL 为你 fork 的原仓库地址
+          git remote add upstream https://github.com/原作者用户名/原仓库名.git
+          git fetch upstream
+      
+      - name: 尝试合并上游更新
+        id: merge
+        run: |
+          # 切换到主分支（根据你的实际分支名修改，可能是 main 或 master）
+          git checkout main
+          
+          # 尝试合并上游的主分支
+          if git merge upstream/main --no-edit; then
+            echo "merge_status=success" >> $GITHUB_OUTPUT
+            echo "✅ 成功合并上游更新"
+          else
+            echo "merge_status=conflict" >> $GITHUB_OUTPUT
+            echo "⚠️ 检测到合并冲突，取消合并"
+            git merge --abort
+            exit 0
+          fi
+      
+      - name: 推送更新
+        if: steps.merge.outputs.merge_status == 'success'
+        run: |
+          git push origin main
+          echo "🚀 已推送更新到 fork 仓库"
+      
+      - name: 创建 Issue 通知冲突
+        if: steps.merge.outputs.merge_status == 'conflict'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'sync-conflict'
+            });
+            
+            // 如果已存在冲突 issue，不重复创建
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '⚠️ 上游同步遇到冲突',
+                body: '自动同步上游仓库时检测到合并冲突，需要手动解决。\n\n请手动执行以下步骤：\n```bash\ngit fetch upstream\ngit merge upstream/main\n# 解决冲突后\ngit push origin main\n```',
+                labels: ['sync-conflict']
+              });
+            }
