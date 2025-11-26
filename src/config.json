@@ -13,7 +13,7 @@
         }
     },
     "execution": {
-        "parallel": false,
+        "parallel": true,
         "runOnZeroPoints": false,
         "clusters": 1
     },
