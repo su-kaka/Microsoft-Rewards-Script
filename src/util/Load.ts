@@ -237,19 +237,14 @@ export async function loadSessionData(sessionPath: string, email: string, isMobi
             cookies = JSON.parse(cookiesData)
         }
 
-        // 获取指纹文件（支持旧版拼写错误"fingerpint"和正确的"fingerprint"）
-        const baseDir = path.join(__dirname, '../browser/', sessionPath, email)
-        const legacyFile = path.join(baseDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
-        const correctFile = path.join(baseDir, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
+        // 获取指纹文件
+        const fingerprintFile = path.join(__dirname, '../browser/', sessionPath, email, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
 
         let fingerprint!: BrowserFingerprintWithHeaders
         const shouldLoad = (saveFingerprint.desktop && !isMobile) || (saveFingerprint.mobile && isMobile)
-        if (shouldLoad) {
-            const chosen = fs.existsSync(correctFile) ? correctFile : (fs.existsSync(legacyFile) ? legacyFile : '')
-            if (chosen) {
-                const fingerprintData = await fs.promises.readFile(chosen, 'utf-8')
-                fingerprint = JSON.parse(fingerprintData)
-            }
+        if (shouldLoad && fs.existsSync(fingerprintFile)) {
+            const fingerprintData = await fs.promises.readFile(fingerprintFile, 'utf-8')
+            fingerprint = JSON.parse(fingerprintData)
         }
 
         return {
@@ -293,12 +288,9 @@ export async function saveFingerprintData(sessionPath: string, email: string, is
             await fs.promises.mkdir(sessionDir, { recursive: true })
         }
 
-        // 将指纹保存到文件（为兼容性写入旧版和更正的名称）
-        const legacy = path.join(sessionDir, `${isMobile ? 'mobile_fingerpint' : 'desktop_fingerpint'}.json`)
-        const correct = path.join(sessionDir, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
-        const payload = JSON.stringify(fingerprint)
-        await fs.promises.writeFile(correct, payload)
-        try { await fs.promises.writeFile(legacy, payload) } catch { /* ignore */ }
+        // 将指纹保存到文件
+        const fingerprintFile = path.join(sessionDir, `${isMobile ? 'mobile_fingerprint' : 'desktop_fingerprint'}.json`)
+        await fs.promises.writeFile(fingerprintFile, JSON.stringify(fingerprint))
 
         return sessionDir
     } catch (error) {

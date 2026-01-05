@@ -48,7 +48,8 @@ class Browser {
                     '--disable-setuid-sandbox',
                     '--ignore-certificate-errors',
                     '--ignore-certificate-errors-spki-list',
-                    '--ignore-ssl-errors'
+                    '--ignore-ssl-errors',
+                    '--disable-quic',
                 ]
             })
         } catch (e: unknown) {
